@@ -1,5 +1,3 @@
-import numpy as np #biblioteca pra matrizes e cenas
+import numpy as np
 
 
-print("bom dia")
-#qualquer cena 

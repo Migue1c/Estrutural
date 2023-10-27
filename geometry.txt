@@ -1,0 +1,25 @@
+Geometry
+Ne = number of elements in between that point and the next one
+v, w and beta are the degrees of freedom; 1 is free 0 is a fixed value (boundary condition)
+#       z[mm]   r[mm]   t[mm]   Ne      v       w       beta
+1       0       0       5       10      1       1       1      
+2       0       49.4    3       30      0       0       1
+3       913.68  49.4    15      15      1       1       1
+4       972.53  16.23   15      4       1       1       1
+5       980     11.25   12      10      1       1       1
+6       1003.4  26.3    10              1       1       1
+
+Material Properties
+            E       niu     rho     smaxt   smaxc
+#Nome       [GPa]         [kg/m^3]  [MPa]   [MPa]
+steel       200     0.3     7.6     800     200
+aluminum    70      0.3     2.8     170     60
+
+Static Loading
+#       z[mm]   r[mm]   p[MPa]
+1       0       0       50
+2       0       49.4    50
+3       913.68  49.4    50
+4       972.53  16.23   30
+5       980     11.25   30
+6       1003.4  26.3    1

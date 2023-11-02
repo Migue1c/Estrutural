@@ -59,8 +59,15 @@ Bij[0,:6] = sp.diff(Pbar1[0,:],s)                   #defines first row of Matrix
 Bij[1,:6] = (Pbar1[1,:]*cosphi+Pbar[0,:]*sinphi)/r  #defines second row of Matrix Bij IAW extensions vector
 Bij[2,:6] = -1*sp.diff(sp.diff(Pbar1[1,:],s),s)     #defines third row of Matrix Bij IAW extensions vector
 Bij[3,:6] = -1*sp.diff(Pbar1[1,:],s)*sinphi/r       #defines fourth row of Matrix Bij IAW extensions vector
-print("Matrix Bij:\n",Bij)                                          #Prints Bij as defines in book
 
-#Próximos passos: transformar Pbar em P e Bij em B através da Matriz transformação
+T = sp.Matrix([[cosphi, sinphi, 0],[-sinphi, cosphi, 0],[0, 0, 1]]) #comes from function to be defined later
+P = sp.zeros(2,6)                                                   #defines Matrix P as zeros
+P[:,:3] = Pbar1[:,:3]*T                                             #first halve of Matrix P
+P[:,3:] = Pbar1[:,3:]*T                                             #second halve of Matrix P
+B = sp.zeros(4,6)                                                   #defines Matrix B as zeros
+B[:,:3] = Bij[:,:3]*T                                               #defines first halve of Matrix B
+B[:,3:] = Bij[:,3:]*T                                               #defines second halve of Matrix B
+
+
 #Definir método de integração
 #Quando estiver tudo definido, converter para função com os símbolos como dados de entrada

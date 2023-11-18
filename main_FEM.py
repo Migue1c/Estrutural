@@ -148,8 +148,8 @@ def Pmatrix(s1:float, index:int, phi:float) -> np.ndarray:
     P = Pbar(s1, index)
     print(P, '\n')
     Pi, Pj = np.hsplit(P, 2)
-    print(Pi)
-    print(Pj)
+    #print(Pi)
+    #print(Pj)
     return np.hstack((Pi@T, Pj@T))
 
 def loading(ne:int, pressure:np.ndarray) -> None: # To be verified
@@ -179,7 +179,7 @@ def Kestacked(ne:int, ni:int, simpson=False) -> np.ndarray: # Incoeherent integr
         D = elastM(i)
         if simpson:
             I = np.empty((6, 6, ni+1), dtype=float)
-            for j, s1 in enumerate(np.linspace(0,1,ni+1) ):
+            for j, s1 in enumerate(np.linspace(0,1,ni+1)):
                 r = ri + s1*h*np.sin(phi)
                 B = Bmatrix(s1,i,r,phi)
                 I[:,:,j] = B.T@D@B*(r)
@@ -225,6 +225,26 @@ def k_global(ne:int, ni=1200, sparse=False) -> None:
     #print(k_globalM)
     #print(sparse)
 
+def Mestacked(ne:int, ni:int, simpson=True) -> np.ndarray: # Incoeherent integration results
+    mes = np.empty((6,6,ne), dtype=float)
+    for i in range(0, ne):
+        rho = 2700 #Value from Material Vector
+        t = vpe[i,3]
+        h = vpe[i, 2]
+        phi = vpe[i, 1]
+        ri = vpe[i, 0]
+        if simpson:
+            I = np.empty((6, 6, ni+1), dtype=float)
+            for j, s1 in enumerate(np.linspace(0,1,ni+1) ):
+                r = ri + s1*h*np.sin(phi)
+                P = Pmatrix(s1,i,phi)
+                I[:,:,j] = (r)*P.T@P
+
+            me = rho*t*2*sp.pi*h*sp.integrate.simpson(I, x=None, dx=h/ni, axis=-1)
+        mes[:,:,i] = me
+    return mes
+
+
 def main():
     global mat
     mat = np.array([[2800, 70*10**9, 0.33, 200*10**6, 70*10**6],
@@ -250,9 +270,13 @@ def main():
 
     #kelements = Kestacked(ne)
     k_global(ne)
+    m_global(ne)
     #print(Pmatrix(0.4,1,np.pi/2))
     #pressure = np.ones(ne)
     #loading(ne, pressure)
+
+    natfreq = np.sqrt(sp.linalg.eigh(k_globalM,m_globalM , eigvals_only=True))/(2*np.pi)
+    print(natfreq)
 
 # Atention to units system, is it mm or m? needs to be coherent
 if __name__ == '__main__':

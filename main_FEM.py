@@ -288,7 +288,7 @@ def main():
     acum_el = np.cumsum(nev, dtype=int) # each entry in this vect is the number of elements of the present segment + those that came before
 
     nod_and_element(points, nev, ne, acum_el, thicnesses, matseg, interpolation)
-    print(vpn)
+    #print(vpn)
     #print(vpe)
 
     #kelements = Kestacked(ne)

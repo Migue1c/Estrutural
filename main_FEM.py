@@ -244,6 +244,29 @@ def Mestacked(ne:int, ni:int, simpson=True) -> np.ndarray: # Incoeherent integra
         mes[:,:,i] = me
     return mes
 
+def m_global(ne:int, ni=1200, sparse=False) -> None:
+    global m_globalM
+    mes = Mestacked(ne, ni)
+    if sparse:
+        row = []
+        column = []
+        data = []
+        for i in range(0, ne):
+            for j in range(0,6):
+                for k in range(0,6):
+                    row.append(3*i+j)
+                    column.append(3*i+k)
+                    data.append(mes[j, k, i])
+        #print(row)
+        #print(column)
+        #print(data)
+        m_globalM = sp.sparse.bsr_array((data, (row, column)), shape=(3*(ne+1), 3*(ne+1)))#.toarray()     
+    else:
+        m_globalM = np.zeros((3*(ne+1), 3*(ne+1)), dtype='float64')
+        for i in range(0,ne):
+            m_globalM[3*i:3*i+6,3*i:3*i+6] = m_globalM[3*i:3*i+6,3*i:3*i+6] + mes[:,:,i]
+    return m_globalM
+
 
 def main():
     global mat

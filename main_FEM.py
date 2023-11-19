@@ -265,7 +265,6 @@ def m_global(ne:int, ni=1200, sparse=False) -> None:
             m_globalM[3*i:3*i+6,3*i:3*i+6] = m_globalM[3*i:3*i+6,3*i:3*i+6] + mes[:,:,i]
     return m_globalM
 
-
 def main():
     global mat
     mat = np.array([[2800, 70*10**9, 0.33, 200*10**6, 70*10**6],
@@ -280,6 +279,7 @@ def main():
     
     nev = np.array([3, 2, 2, 2, 2]) # number of elements per segment
     interpolation = np.array([0, 0, 0, 1, 0])
+    global ne
     ne = np.sum(nev)                 # total number of elements
     thicnesses = np.array([0.03, 0.008, 0.008, 0.05, 0.04, 0.03])
     matseg = np.array([0, 0, 0, 0, 0])
@@ -296,9 +296,10 @@ def main():
     #pressure = np.ones(ne)
     #loading(ne, pressure)
 
-    natfreq = np.sqrt(sp.linalg.eigh(k_globalM,m_globalM , eigvals_only=True))/(2*np.pi)
-    sortfreq = np.sort(natfreq, kind='heapsort', axis=None)
-    print(sortfreq)
+    natfreq, w = sp.linalg.eigh(k_globalM,m_globalM , eigvals_only=False) #Eigenvalues and Eigenvectors already sorted (ascending) in respect to each other
+    natfreq1 = np.sqrt(natfreq)/(2*np.pi) #Conversion to Hertz
+    print(f"Natural Frequencies: {natfreq}\nDisplacement Vector: {w}")
+    
 
 # Atention to units system, is it mm or m? needs to be coherent
 if __name__ == '__main__':

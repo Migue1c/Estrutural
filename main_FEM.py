@@ -146,7 +146,7 @@ def Pbar(s1:float, index:int) -> np.ndarray:
 def Pmatrix(s1:float, index:int, phi:float) -> np.ndarray:
     T = transM(phi)
     P = Pbar(s1, index)
-    print(P, '\n')
+    #print(P, '\n')
     Pi, Pj = np.hsplit(P, 2)
     #print(Pi)
     #print(Pj)
@@ -166,9 +166,9 @@ def loading(ne:int, pressure:np.ndarray) -> None: # To be verified
         integrand = lambda s: ef_press.dot(Pmatrix(s1(s), i, phi))*(r(s))
         integral = 0.347854845*integrand(-0.861136312)+0.652145155*integrand(-0.339981044)+0.652145155*integrand(0.339981044)+0.347854845*integrand(0.861136312)
         load_vct[3*i:3*i+6] = load_vct[3*i:3*i+6] + 2*np.pi*h*integral
-    print(load for load in load_vct)
+    #print(load for load in load_vct)
     #print(load_vct)
-    print(load_vct.shape)
+    #print(load_vct.shape)
 
 def Kestacked(ne:int, ni:int, simpson=False) -> np.ndarray: # Incoeherent integration results
     kes = np.empty((6,6,ne), dtype=float)
@@ -185,13 +185,11 @@ def Kestacked(ne:int, ni:int, simpson=False) -> np.ndarray: # Incoeherent integr
                 I[:,:,j] = B.T@D@B*(r)
 
             ke = 2*np.pi*h*sp.integrate.simpson(I, x=None, dx=h/ni, axis=-1)
-            print(ke)
         else:
             s1_ = lambda s: (s+1)/2
             r = lambda s: ri + s1_(s)*h*np.sin(phi)
             integrand = lambda s: Bmatrix(s1_(s),i,r(s),phi).T@D@Bmatrix(s1_(s),i,r(s),phi)*(r(s))
             ke = 2*np.pi*h*((5/9)*integrand(-np.sqrt(3/5))+(8/9)*integrand(0)+(5/9)*integrand(np.sqrt(3/5)))
-            print(ke)
         kes[:,:,i] = ke
     return kes
 
@@ -299,7 +297,8 @@ def main():
     #loading(ne, pressure)
 
     natfreq = np.sqrt(sp.linalg.eigh(k_globalM,m_globalM , eigvals_only=True))/(2*np.pi)
-    print(natfreq)
+    sortfreq = np.sort(natfreq, kind='heapsort', axis=None)
+    print(sortfreq)
 
 # Atention to units system, is it mm or m? needs to be coherent
 if __name__ == '__main__':

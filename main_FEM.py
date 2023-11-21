@@ -152,7 +152,7 @@ def Pmatrix(s1:float, index:int, phi:float) -> np.ndarray:
     #print(Pj)
     return np.hstack((Pi@T, Pj@T))
 
-def loading(ne:int, pressure:np.ndarray) -> None: # To be verified
+def loading(ne:int, pressure:np.ndarray) -> None: # Atention to the gauss integral
     global load_vct
     global vpe
     load_vct = np.zeros(3*(ne+1))
@@ -166,11 +166,11 @@ def loading(ne:int, pressure:np.ndarray) -> None: # To be verified
         integrand = lambda s: ef_press.dot(Pmatrix(s1(s), i, phi))*(r(s))
         integral = 0.347854845*integrand(-0.861136312)+0.652145155*integrand(-0.339981044)+0.652145155*integrand(0.339981044)+0.347854845*integrand(0.861136312)
         load_vct[3*i:3*i+6] = load_vct[3*i:3*i+6] + 2*np.pi*h*integral
-    #print(load for load in load_vct)
+    print(load for load in load_vct)
     #print(load_vct)
-    #print(load_vct.shape)
+    print(load_vct.shape)
 
-def Kestacked(ne:int, ni:int, simpson=False) -> np.ndarray: # Incoeherent integration results
+def Kestacked(ne:int, ni:int, simpson=True) -> np.ndarray: # Incoeherent integration results
     kes = np.empty((6,6,ne), dtype=float)
     for i in range(0, ne):
         phi = vpe[i, 1]
@@ -185,11 +185,13 @@ def Kestacked(ne:int, ni:int, simpson=False) -> np.ndarray: # Incoeherent integr
                 I[:,:,j] = B.T@D@B*(r)
 
             ke = 2*np.pi*h*sp.integrate.simpson(I, x=None, dx=h/ni, axis=-1)
+            print(ke, '\n')
         else:
             s1_ = lambda s: (s+1)/2
             r = lambda s: ri + s1_(s)*h*np.sin(phi)
             integrand = lambda s: Bmatrix(s1_(s),i,r(s),phi).T@D@Bmatrix(s1_(s),i,r(s),phi)*(r(s))
             ke = 2*np.pi*h*((5/9)*integrand(-np.sqrt(3/5))+(8/9)*integrand(0)+(5/9)*integrand(np.sqrt(3/5)))
+            print(ke)
         kes[:,:,i] = ke
     return kes
 
@@ -224,9 +226,10 @@ def k_global(ne:int, ni=1200, sparse=False) -> None:
     #print(sparse)
 
 def Mestacked(ne:int, ni:int, simpson=True) -> np.ndarray: # Incoeherent integration results
+    global mat
     mes = np.empty((6,6,ne), dtype=float)
     for i in range(0, ne):
-        rho = 2700 #Value from Material Vector
+        rho = mat[int(vpe[i, 4]), 0] # Specific mass for the material in the i-th element
         t = vpe[i,3]
         h = vpe[i, 2]
         phi = vpe[i, 1]
@@ -265,6 +268,7 @@ def m_global(ne:int, ni=1200, sparse=False) -> None:
             m_globalM[3*i:3*i+6,3*i:3*i+6] = m_globalM[3*i:3*i+6,3*i:3*i+6] + mes[:,:,i]
     return m_globalM
 
+
 def main():
     global mat
     mat = np.array([[2800, 70*10**9, 0.33, 200*10**6, 70*10**6],
@@ -279,7 +283,6 @@ def main():
     
     nev = np.array([3, 2, 2, 2, 2]) # number of elements per segment
     interpolation = np.array([0, 0, 0, 1, 0])
-    global ne
     ne = np.sum(nev)                 # total number of elements
     thicnesses = np.array([0.03, 0.008, 0.008, 0.05, 0.04, 0.03])
     matseg = np.array([0, 0, 0, 0, 0])
@@ -296,10 +299,8 @@ def main():
     #pressure = np.ones(ne)
     #loading(ne, pressure)
 
-    natfreq, w = sp.linalg.eigh(k_globalM,m_globalM , eigvals_only=False) #Eigenvalues and Eigenvectors already sorted (ascending) in respect to each other
-    natfreq1 = np.sqrt(natfreq)/(2*np.pi) #Conversion to Hertz
-    print(f"Natural Frequencies: {natfreq}\nDisplacement Vector: {w}")
-    
+    natfreq = np.sqrt(sp.linalg.eigh(k_globalM,m_globalM , eigvals_only=True))/(2*np.pi)
+    print(natfreq)
 
 # Atention to units system, is it mm or m? needs to be coherent
 if __name__ == '__main__':

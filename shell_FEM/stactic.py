@@ -77,7 +77,7 @@ def Kestacked(ne:int, vpe, mat, ni:int, simpson=True) -> np.ndarray: # Incoehere
         kes[:,:,i] = ke
     return kes
 
-def k_global(ne:int, vpe, mat, ni=1200, sparse=False) -> None:
+def k_global(ne:int, vpe, mat, ni=1200, sparse=False) -> np.ndarray:
     kes = Kestacked(ne, vpe, mat, ni)
     if sparse:
         row = []

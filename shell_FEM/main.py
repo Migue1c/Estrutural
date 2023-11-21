@@ -128,7 +128,7 @@ def main():
     #pressure = np.ones(ne)
     #loading(ne, pressure)
 
-    natfreq = np.sqrt(sp.linalg.eigh(k_globalM, m_globalM, eigvals_only=True))/(2*np.pi)
+    natfreq, w = sp.linalg.eigh(k_globalM, m_globalM, eigvals_only=False)
     print(natfreq)
 
 # Atention to units system, is it mm or m? needs to be coherent

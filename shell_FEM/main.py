@@ -4,8 +4,6 @@ from stactic import k_global
 from modal import m_global
 
 def nod_and_element(points:np.ndarray, nev: np.ndarray, ne:int, acum_el:np.ndarray, thicnesses: np.ndarray, matseg: np.ndarray, interpolation: np.ndarray):
-    global vpn
-    global vpe
 
     nl = len(points) - 1 # number of segments equals number of points minus 1
     nn = ne + 1          # total number of nodes equals number of elements + 1
@@ -88,6 +86,7 @@ def nod_and_element(points:np.ndarray, nev: np.ndarray, ne:int, acum_el:np.ndarr
                     vpe[acum_el[i]-nev[i]+j,3] = (thi[j]+thi[j+1])/2
                     vpe[acum_el[i]-nev[i]+j,4] = matseg[i]
     vpn[nn-1,:] = points[-1,:]
+    #print(vpe)
     #print(vpn, len(vpn))
     
     #plt.scatter(vpn[:-1,0], vpe[:,3], marker='o', c='b', s=2)
@@ -95,6 +94,7 @@ def nod_and_element(points:np.ndarray, nev: np.ndarray, ne:int, acum_el:np.ndarr
     #plt.grid()
     #plt.axis('equal')
     #plt.show()
+    return vpn, vpe
 
 
 def main():
@@ -117,13 +117,13 @@ def main():
     matseg = np.array([0, 0, 0, 0, 0])
     acum_el = np.cumsum(nev, dtype=int) # each entry in this vect is the number of elements of the present segment + those that came before
 
-    nod_and_element(points, nev, ne, acum_el, thicnesses, matseg, interpolation)
+    vpn, vpe = nod_and_element(points, nev, ne, acum_el, thicnesses, matseg, interpolation)
     #print(vpn)
     #print(vpe)
 
     #kelements = Kestacked(ne)
-    k_global(ne)
-    m_global(ne)
+    k_globalM = k_global(ne, vpe, mat)
+    m_globalM = m_global(ne, vpe, mat)
     #print(Pmatrix(0.4,1,np.pi/2))
     #pressure = np.ones(ne)
     #loading(ne, pressure)

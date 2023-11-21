@@ -3,9 +3,7 @@ import scipy as sp
 from stactic import Pmatrix
 
 
-def Mestacked(ne:int, ni:int, simpson=True) -> np.ndarray:
-    global vpe
-    global mat
+def Mestacked(ne:int, vpe, mat, ni:int, simpson=True) -> np.ndarray:
     mes = np.empty((6,6,ne), dtype=float)
     for i in range(0, ne):
         rho = mat[int(vpe[i, 4]), 0] # Specific mass for the material in the i-th element
@@ -17,16 +15,17 @@ def Mestacked(ne:int, ni:int, simpson=True) -> np.ndarray:
             I = np.empty((6, 6, ni+1), dtype=float)
             for j, s1 in enumerate(np.linspace(0,1,ni+1) ):
                 r = ri + s1*h*np.sin(phi)
-                P = Pmatrix(s1,i,phi)
+                P = Pmatrix(s1,i,phi, vpe)
                 I[:,:,j] = (r)*P.T@P
 
             me = rho*t*2*sp.pi*h*sp.integrate.simpson(I, x=None, dx=h/ni, axis=-1)
+        #print('The mass matrix is:\n', me)
         mes[:,:,i] = me
     return mes
 
-def m_global(ne:int, ni=1200, sparse=False) -> None:
+def m_global(ne:int, vpe, mat, ni=1200, sparse=False) -> None:
     global m_globalM
-    mes = Mestacked(ne, ni)
+    mes = Mestacked(ne, vpe, mat, ni)
     if sparse:
         row = []
         column = []

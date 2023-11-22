@@ -82,6 +82,10 @@ def ModalSolver(k:np.ndarray, m:np.ndarray, u_DOF:np.ndarray):
     eig_vals, eig_vect = np.linalg.eigh(a)
 
 
+'''
+é necessário adicionar zeros de volta nos vetores dos valores proprioss
+'''
+
 
 #Dinamic Solution:
 

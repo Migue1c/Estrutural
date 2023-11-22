@@ -1,7 +1,11 @@
 import numpy as np
 import math
 import scipy as sc
-
+from stactic import k_global
+from modal import m_global
+from dynamic import c_global
+#from loading import F
+#from mesh import u_DOF
 
 
 #Function to reduce matrices
@@ -83,7 +87,7 @@ def ModalSolver(k:np.ndarray, m:np.ndarray, u_DOF:np.ndarray):
 
     return eig_vals, eig_vect
 
-
+ 
 
 #Dinamic Solution:
 

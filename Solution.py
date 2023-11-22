@@ -28,19 +28,19 @@ def RedMatrix(m:np.ndarray, u_DOF:np.ndarray):
 
 
 #Function to add back the zeros
-def RdfMatrix(v:np.ndarray, u_DOF:np.ndarray):
+def RdfMatrix(m:np.ndarray, u_DOF:np.ndarray):
     #lines only
     n = u_DOF.shape[0] - 1
     i=0
-    a = v.shape[1]
+    a = m.shape[1]
     nc = np.zeros((1,a))
 
     while i <= n :
         if u_DOF[i,0] == 0 :
-            v = np.insert(v, i, nc, axis=0 )
+            m = np.insert(m, i, nc, axis=0 )
         i += 1
     
-    return v
+    return m
 
 
 

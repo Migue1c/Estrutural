@@ -70,9 +70,6 @@ def StaticSolver(k:np.ndarray, f:np.ndarray, u_DOF:np.ndarray):
 
 def ModalSolver(k:np.ndarray, m:np.ndarray, u_DOF:np.ndarray):
 
-    global eig_vals
-    global eig_vect
-
     #Reduce stiffness and mass matrices
     k_red = RedMatrix(k, u_DOF)
     m_red = RedMatrix(m, u_DOF)
@@ -83,6 +80,7 @@ def ModalSolver(k:np.ndarray, m:np.ndarray, u_DOF:np.ndarray):
 
     #re-add zeros to the eigenvectors matrix
     eig_vect = RdfMatrix(eig_vect, u_DOF)
+
     return eig_vals, eig_vect
 
 

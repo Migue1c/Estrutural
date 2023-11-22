@@ -81,10 +81,9 @@ def ModalSolver(k:np.ndarray, m:np.ndarray, u_DOF:np.ndarray):
     a = np.linalg.inv(m_red) @ k_red
     eig_vals, eig_vect = np.linalg.eigh(a)
 
+    #re-add zeros to the eigenvectors matrix
+    eig_vect = RdfMatrix(eig_vect, u_DOF)
 
-'''
-é necessário adicionar zeros de volta nos vetores dos valores proprioss
-'''
 
 
 #Dinamic Solution:

@@ -106,3 +106,24 @@ def k_global(ne:int, vpe, mat, ni=1200, sparse=False) -> np.ndarray:
     #print(k_globalM)
     #print(sparse)
     return k_globalM
+def calculate_stresses_strains(U, E, ne, vpe):
+    strains = np.zeros(ne)  # Vetor de extensões
+    direct_stresses = np.zeros(ne)  # Vetor de tensões diretas
+    von_mises_stresses = np.zeros(ne)  # Vetor de tensões de Von Mises
+
+    for i in range(ne):
+        # Cálculo da extensão (derivação do deslocamento em relação à coordenada axial)
+        dz = vpe[i, 2]  # Comprimento do elemento
+        du = U[3*(i+1)-3] - U[3*i]  # Variação do deslocamento nos nós do elemento
+        strain = du / dz  # Extensão
+        strains[i] = strain
+
+        # Cálculo da tensão direta
+        direct_stress = E * strain  # Tensão direta
+        direct_stresses[i] = direct_stress
+
+        # Cálculo da tensão de Von Mises
+        von_mises_stress = np.sqrt(3/2) * direct_stress  # Tensão de Von Mises
+        von_mises_stresses[i] = von_mises_stress
+
+    return strains, direct_stresses, von_mises_stresses

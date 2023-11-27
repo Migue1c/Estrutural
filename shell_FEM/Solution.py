@@ -4,7 +4,7 @@ import scipy as sc
 from stactic import k_global
 from modal import m_global
 from dynamic import c_global
-#from loading import F
+#from loading import Carr_t
 #from mesh import u_DOF
 
 
@@ -131,7 +131,7 @@ def DinamicSolver(m:np.ndarray, c:np.ndarray, k:np.ndarray, f:np.ndarray, x_0:np
     while tk < t_final :
         
         #Force vector for current tk
-        # f = Carr_t(t = tk)
+        # f = Carr_t(tk)
         # f = RedMatrix(f, u_DOF)
 
         #Starting value [x_d2_(0)]

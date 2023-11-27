@@ -100,6 +100,9 @@ def DinamicSolver(m:np.ndarray, c:np.ndarray, k:np.ndarray, f:np.ndarray, x_0:np
     global matrix_ud 
     global matrix_ud2   
 
+    #Starting value for the force vector
+    #f = Carr_t(tk)
+
     #Reduce Matrices
     k = RedMatrix(k, u_DOF)
     m = RedMatrix(m, u_DOF)
@@ -128,7 +131,8 @@ def DinamicSolver(m:np.ndarray, c:np.ndarray, k:np.ndarray, f:np.ndarray, x_0:np
     while tk < t_final :
         
         #Force vector for current tk
-        # f = Carr_t(t = t_k)
+        # f = Carr_t(t = tk)
+        # f = RedMatrix(f, u_DOF)
 
         #Starting value [x_d2_(0)]
         x_0_d2 = np.linalg.inv(m) @ (f - (c @ x_0_d ) - (k @ x_0))

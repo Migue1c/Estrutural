@@ -53,7 +53,7 @@ def modal_analysis(ne, vpe, u_DOF, mat, ni=1200, sparse=False, is_called_from_dy
     m_globalM = m_global(ne, vpe, mat, ni, sparse)
     if is_called_from_dynamic:
         natfreq = (np.sqrt(sp.linalg.eigh(k_globalM, m_globalM, eigvals_only=True))[0:2])/(2*np.pi)
-        return natfreq[0], natfreq[1], m_globalM
+        return natfreq[0], natfreq[1], m_globalM, k_globalM
     else:
         ModalSolver(k_global,m_global, u_DOF)
     output = np.array[eig_vals,eig_vect]

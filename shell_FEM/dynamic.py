@@ -37,7 +37,6 @@ def dynamic_analysis(ne, vpe, mat, u_DOF, mask, ni=1200, sparse=False):
     sparse = bool(input('Do you want to initialize the stifness, mass and damping matrices as sparse (PLS answer 0)'))
 
 
-    k_globalM = k_global(ne, vpe, mat, ni, sparse)
-    mode1, mode2, m_globalM = modal_analysis(ne, vpe, mat, ni, sparse, is_called_from_dynamic=True)
+    mode1, mode2, m_globalM, k_globalM = modal_analysis(ne, vpe, mat, ni, sparse, is_called_from_dynamic=True)
     c_globalM = c_global(ne, mask, k_globalM, m_globalM, mode1, mode2, zeta1, zeta2)
 

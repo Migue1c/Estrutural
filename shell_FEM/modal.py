@@ -48,8 +48,9 @@ def m_global(ne:int, vpe, mat, ni=1200, sparse=False) -> np.ndarray:
             m_globalM[3*i:3*i+6,3*i:3*i+6] = m_globalM[3*i:3*i+6,3*i:3*i+6] + mes[:,:,i]
     return m_globalM
 
-def modal_analysis(ne, vpe, mat, ni=1200, sparse=False, is_called_from_dynamic=False):
-    
+def modal_analysis(ne, vpe, u_DOF, mat, ni=1200, sparse=False, is_called_from_dynamic=False):
+    k_globalM = k_global(ne, vpe, mat, ni, sparse)
+    m_globalM = m_global(ne, vpe, mat, ni, sparse)
     if is_called_from_dynamic:
         natfreq = (np.sqrt(sp.linalg.eigh(k_globalM, m_globalM, eigvals_only=True))[0:2])/(2*np.pi)
         return natfreq[0], natfreq[1], m_globalM

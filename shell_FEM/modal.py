@@ -57,3 +57,4 @@ def modal_analysis(ne, vpe, u_DOF, mat, ni=1200, sparse=False, is_called_from_dy
     else:
         ModalSolver(k_global,m_global, u_DOF)
     output = np.array[eig_vals,eig_vect]
+

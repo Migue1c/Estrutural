@@ -62,9 +62,9 @@ def StaticSolver(k:np.ndarray, f:np.ndarray, u_DOF:np.ndarray):
     u_red = np.linalg.solve(k_red,f_red)
     
     #re-add zeros to the displacement vector
-    u_rdf = RdfMatrix(u_red, u_DOF)
+    u_global = RdfMatrix(u_red, u_DOF)
 
-    return u_rdf
+    return u_global
 
 
 

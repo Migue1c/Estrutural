@@ -75,7 +75,7 @@ def StaticSolver(k:np.ndarray, f:np.ndarray, u_DOF:np.ndarray):
 def ModalSolver(k:np.ndarray, m:np.ndarray, u_DOF:np.ndarray):
 
     #Reduce stiffness and mass matrices
-    k_red = RedMatrix(k, u_DOF)
+    k_red = RedMatrix(k, u_DOF)             #must be able to run independent analysis 
     m_red = RedMatrix(m, u_DOF)
 
     #Solve the eigenvalue problem

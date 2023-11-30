@@ -27,7 +27,8 @@ def elastM(index:int, vpe, mat) -> np.ndarray:
     E = mat[int(vpe[index, 4]), 1] # mat must have more than one material so that the array is 2D by default
     t = vpe[index, 3]
     upsilon = mat[int(vpe[index, 4]), 2]
-    D = (E*t)/(1-upsilon**2)*np.array([[1,upsilon, 0, 0],[upsilon, 1, 0, 0],[0, 0, (t**2/12), upsilon*(t**2/12)],[0, 0, upsilon*(t**2/12), (t**2/12)]])
+    D = (E*t)/(1-upsilon**2)*np.array([[1,upsilon, 0, 0],[upsilon, 1, 0, 0],[0, 0, (t**2/12), upsilon*(t**2/12)],[0, 0, upsilon*(t**2/12), 
+                                                                                                                                    (t**2/12)]])
     return D
 
 def transM(phi) -> np.ndarray:
@@ -97,6 +98,7 @@ def k_global(ne:int, vpe, mat, ni=1200, sparse=False) -> np.ndarray:
         k_globalM = np.zeros((3*(ne+1), 3*(ne+1)), dtype='float64')
         for i in range(0,ne):
             k_globalM[3*i:3*i+6,3*i:3*i+6] = k_globalM[3*i:3*i+6,3*i:3*i+6] + kes[:,:,i]
+    return k_globalM
     #print(f'Element {i+1}')
     #for j in range(0, 3*(ne+1)):
     #    for k in range(0, 3*(ne+1)):
@@ -105,7 +107,8 @@ def k_global(ne:int, vpe, mat, ni=1200, sparse=False) -> np.ndarray:
     #print('\n\n')
     #print(k_globalM)
     #print(sparse)
-    return k_globalM
+ 
+
 def calculate_stresses_strains(U, E, ne, vpe):
     strains = np.zeros(ne)  # Vetor de extensões
     direct_stresses = np.zeros(ne)  # Vetor de tensões diretas

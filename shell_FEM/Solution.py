@@ -171,4 +171,3 @@ def DinamicSolver(m:np.ndarray, c:np.ndarray, k:np.ndarray, f:np.ndarray, x_0:np
     matrix_u = RdfMatrix(matrix_u, u_DOF)
     matrix_ud = RdfMatrix(matrix_ud, u_DOF)
     matrix_ud2 = RdfMatrix(matrix_ud2, u_DOF)
-

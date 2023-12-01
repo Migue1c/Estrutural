@@ -80,7 +80,7 @@ def ModalSolver(k:np.ndarray, m:np.ndarray, u_DOF:np.ndarray):
 
     #Solve the eigenvalue problem
     a = np.linalg.inv(m_red) @ k_red
-    eig_vals, eig_vect = np.linalg.eigh(a)
+    eig_vals, eig_vect = np.linalg.eig(a)
 
     #re-add zeros to the eigenvectors matrix
     eig_vect = RdfMatrix(eig_vect, u_DOF)
@@ -107,7 +107,13 @@ def DinamicSolver(m:np.ndarray, c:np.ndarray, k:np.ndarray, f:np.ndarray, x_0:np
     k = RedMatrix(k, u_DOF)
     m = RedMatrix(m, u_DOF)
     c = RedMatrix(c, u_DOF)
-    f = RedMatrix(f, u_DOF)    
+    f = RedMatrix(f, u_DOF)
+
+    
+    #on the final version add an "if" to check if vectors already reduced or not
+    #or something to define them as  0
+    x_0 = RedMatrix(x_0, u_DOF)
+    x_0_d = RedMatrix(x_0_d, u_DOF)
 
     #Store starting values:
     matrix_u = x_0
@@ -136,22 +142,22 @@ def DinamicSolver(m:np.ndarray, c:np.ndarray, k:np.ndarray, f:np.ndarray, x_0:np
 
         #Starting value [x_d2_(0)]
         x_0_d2 = np.linalg.inv(m) @ (f - (c @ x_0_d ) - (k @ x_0))
-
+        
         #Time increment:
         tk += delta_t
 
         #Prediction:
         x_tk1_d = x_0_d + (1 - gamma) * delta_t * x_0_d2
         x_tk1 = x_0 + delta_t * x_0_d + (0.5 - beta)*(delta_t**2) * x_0_d2
-
+        
         #Equilibrium eqs.:
         s = m + (gamma * delta_t * c) + (beta * (delta_t**2) * k)
         x_tk1_d2 = np.linalg.inv(s) @ (f - (c @ x_0_d) - (k @ x_0) )
-
+       
         #Correction:
         x_tk1_d = x_tk1_d + delta_t * gamma * x_tk1_d2
         x_tk1 = x_tk1 + (delta_t**2) * beta * x_tk1_d2
-
+       
         #store values in matrices
         matrix_u = np.append(matrix_u, x_tk1, axis=1)
         matrix_ud = np.append(matrix_ud, x_tk1_d, axis=1)
@@ -165,3 +171,4 @@ def DinamicSolver(m:np.ndarray, c:np.ndarray, k:np.ndarray, f:np.ndarray, x_0:np
     matrix_u = RdfMatrix(matrix_u, u_DOF)
     matrix_ud = RdfMatrix(matrix_ud, u_DOF)
     matrix_ud2 = RdfMatrix(matrix_ud2, u_DOF)
+

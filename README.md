@@ -1,9 +1,7 @@
 # Estrutural
 
-Qualquer informação importante escrevem aqui
+#Função Mesh
+Mesh_Properties()
 
-ok!
-FWFEFWF
-
-Estamos todos fodidos
+#Funções Estática:
 

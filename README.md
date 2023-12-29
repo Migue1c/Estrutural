@@ -9,9 +9,10 @@ Funções Estática:
 
 
 Funções Solução:
-    RedMatrix 
-    RdfMatrix
-    StaticSolver
-    ModalSolver
-    DinamicSolver
+
+RedMatrix
+RdfMatrix
+StaticSolver
+ModalSolver
+DinamicSolver
 

@@ -27,8 +27,8 @@ def elastM(index:int, vpe, mat) -> np.ndarray:
     E = mat[int(vpe[index, 4]), 1] # mat must have more than one material so that the array is 2D by default
     t = vpe[index, 3]
     upsilon = mat[int(vpe[index, 4]), 2]
-    D = (E*t)/(1-upsilon**2)*np.array([[1,upsilon, 0, 0],[upsilon, 1, 0, 0],[0, 0, (t**2/12), upsilon*(t**2/12)],[0, 0, upsilon*(t**2/12), 
-                                                                                                                                    (t**2/12)]])
+    D = (E*t)/(1-upsilon**2)*np.array([[1,upsilon, 0, 0],[upsilon, 1, 0, 0],[0, 0, (t**2/12), upsilon*(t**2/12)],[0, 0, upsilon*(t**2/12), (t**2/12)]])
+                                                                                                                                    
     return D
 
 def transM(phi) -> np.ndarray:
@@ -109,24 +109,52 @@ def k_global(ne:int, vpe, mat, ni=1200, sparse=False) -> np.ndarray:
     #print(sparse)
  
 
-def calculate_stresses_strains(U, E, ne, vpe):
-    strains = np.zeros(ne)  # Vetor de extensões
-    direct_stresses = np.zeros(ne)  # Vetor de tensões diretas
-    von_mises_stresses = np.zeros(ne)  # Vetor de tensões de Von Mises
+def calculate_strains_stresses(displacements, vpe, mat):
+    num_nodes = len(displacements)/3
+    num_elements = len(vpe)
 
-    for i in range(ne):
-        # Cálculo da extensão (derivação do deslocamento em relação à coordenada axial)
-        dz = vpe[i, 2]  # Comprimento do elemento
-        du = U[3*(i+1)-3] - U[3*i]  # Variação do deslocamento nos nós do elemento
-        strain = du / dz  # Extensão
-        strains[i] = strain
+    strains = np.zeros((num_nodes, 4))  # Matriz para armazenar as deformações de cada nó (epsilon_s, epsilon_theta, chi_s, chi_theta)
+    for i in range(num_elements):
+        R = vpe[i,0]
+        phi = vpe[i,1]
+        B = Bmatrix(0, i, R, phi, vpe)  # Obtém a matriz B para s1 = 0 
+        strains[i,:] += B @ displacements[3*i:3*i+6]  # Multiplica deslocamentos pelos valores da matriz B exceto o ultimo
+    i = num_elements - 1
+    h = vpe[i, 2]
+    B = Bmatrix(1, i, R +h*np.sin(phi), phi, vpe)  # Obtém a matriz B para s1 = 1
+    strains[i+1,:] += B @ displacements[3*i:3*i+6]  # Multiplica deslocamentos pelos valores da matriz B obtendo a ultima extensao
 
-        # Cálculo da tensão direta
-        direct_stress = E * strain  # Tensão direta
-        direct_stresses[i] = direct_stress
+    forças_N = np.zeros((num_nodes, 4))
+    for i in range(num_elements):
+        D = elastM(i, vpe, mat)
+        forças_N[i,:] += D @ (strains[i,:].T)
+    forças_N[i+1,:] += D @ (strains[i+1,:].T)          
 
-        # Cálculo da tensão de Von Mises
-        von_mises_stress = np.sqrt(3/2) * direct_stress  # Tensão de Von Mises
-        von_mises_stresses[i] = von_mises_stress
+    tensoes_N = np.zeros((num_nodes, 4))
+    for i in range(num_elements):
+        t = vpe[i, 3]
+        sigma_sd = forças_N[i,0]/t -  6*forças_N[i,2]/t**2
+        sigma_sf = forças_N[i,0]/t +  6*forças_N[i,2]/t**2
+        sigma_td = forças_N[i,1]/t -  6*forças_N[i,3]/t**2
+        sigma_tf = forças_N[i,1]/t +  6*forças_N[i,3]/t**2
+        tensoes_N[i, :] = [sigma_sd, sigma_td, sigma_sf, sigma_tf]
+    i += 1
+    sigma_sd = forças_N[i,0]/t - 6*forças_N[i,2]/t**2
+    sigma_sf = forças_N[i,0]/t + 6*forças_N[i,2]/t**2
+    sigma_td = forças_N[i,1]/t - 6*forças_N[i,3]/t**2
+    sigma_tf = forças_N[i,1]/t +     6*forças_N[i,3]/t**2
+    tensoes_N[i, :] = [sigma_sd, sigma_td, sigma_sf, sigma_tf]
+    return strains, tensoes_N
 
-    return strains, direct_stresses, von_mises_stresses
+def tensões_VM(displacements, vpe, mat):
+    num_nodes = len(displacements)/3
+    num_elements = len(vpe)
+    tensoes_N = calculate_strains_stresses(displacements, vpe, mat)
+    VM = np.zeros((num_nodes, 2))
+    for i in range(num_elements):
+        VM[i,0] = np.sqrt(tensoes_N[i,0]**2 -tensoes_N[i,0]*tensoes_N[i,2] + tensoes_N[i,2]**2)
+        VM[i,1] = np.sqrt(tensoes_N[i,1]**2 -tensoes_N[i,1]*tensoes_N[i,3] + tensoes_N[i,3]**2)
+    i = num_elements + 1
+    VM[i,0] = np.sqrt(tensoes_N[i,0]**2 -tensoes_N[i,0]*tensoes_N[i,2] + tensoes_N[i,2]**2)
+    VM[i,1] = np.sqrt(tensoes_N[i,1]**2 -tensoes_N[i,1]*tensoes_N[i,3] + tensoes_N[i,3]**2)
+    return VM

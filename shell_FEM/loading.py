@@ -106,7 +106,7 @@ def nod_and_element(points: np.ndarray, nev: np.ndarray, ne: int, acum_el: np.nd
     # plt.grid()
     # plt.axis('equal')
     # plt.show()
-
+#apagar
 
 def Bi(s1: float, index: int, r: float) -> np.ndarray:
     global vpe

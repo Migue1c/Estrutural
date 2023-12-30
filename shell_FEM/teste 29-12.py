@@ -416,6 +416,65 @@ def FS(displacements ,VM, material, vpe):
 
 
 
+#CARREGAMENTO
+
+
+def pressao(w,nev,nl,press_est,nn):
+    pressure = np.zeros(nn)
+    for i in range(0, nl):
+        #y = np.array([df.loc[i, 'pressure'], df.loc[i+1, 'pressure']]) #same
+        y = press_est
+        y_axis = np.linspace(y[i],y[i+1],nev[i], endpoint=False)#y_axis = np.linspace(max(y), min(y), nev[i] + 1)#same
+        pressure[w[i] - nev[i] : w[i]] += y_axis#press_node#create a two array matrix with the pressure in each node in the whole geometry
+    pressure[-1] = press_est[-1]
+    print(pressure)
+    return pressure
+
+
+def medium_pressure(pressao, ne):
+    press_medium = np.zeros(ne)
+    for i in range(0, ne):
+        press_medium[i] = (pressao[i+1] + pressao[i])/2
+    print(press_medium)
+    return press_medium
+
+
+def loading(ne: int, pressure) -> None:  # To be verified
+    global load_vct
+    global vpe
+    load_vct = np.zeros(3 * (ne + 1))
+    for i in range(0, ne):
+        phi = vpe[i, 1]
+        ri = vpe[i, 0]
+        h = vpe[i, 2]
+        ef_press = np.array([0, pressure[i]])
+        s1 = lambda s: (s + 1) / 2
+        r = lambda s: ri + s1(s) * h * np.sin(phi)
+        integrand = lambda s: ef_press.dot(Pmatrix(s1(s), i, phi)) * (r(s))
+        #I = np.empty((1, 6, 200), dtype=float)
+        #for j, s in enumerate(np.linspace(-1, 1, 200)):
+           # I[:, :, j] = integrand(s)
+        #integral = 2 * np.pi * h * sp.integrate.simpson(I, x=None, dx=h / 199, axis=-1)
+        #print(integral)
+        integral = 0.347854845 * integrand(-0.861136312) + 0.652145155 * integrand(-0.339981044) + 0.652145155 * integrand(0.339981044) + 0.347854845 * integrand(0.861136312)
+        load_vct[3 * i:3 * i + 6] = load_vct[3 * i:3 * i + 6] + 2 * np.pi * h * integral
+    #print(load for load in load_vct)
+    #print(load_vct.shape)
+    print(load_vct)
+    return load_vct
+
+
+def Carr_t(loading,t,t_col,P_col,press_max):
+    p_col_adim = np.zeros(np.size(P_col))
+    p_col_adim = P_col/press_max
+    P_t = np.interp(t,t_col,p_col_adim)
+    loading=loading*P_t
+    print(loading)
+    return loading
+
+
+
+
 
 
 
@@ -429,3 +488,8 @@ mesh, u_DOF, vpe, material = Mesh_Properties()
 k = k_global(len(vpe), vpe, material)
 
 print("matriz K \n", k)
+
+pressure = pressao(w, nev, nl, press_est, nn)
+medium_p = medium_pressure(pressure, len(vpe))
+loading(len(vpe), medium_p)
+

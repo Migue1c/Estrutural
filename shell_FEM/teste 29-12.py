@@ -412,6 +412,18 @@ def FS(displacements ,VM, material, vpe):
     return FS
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 mesh, u_DOF, vpe, material = Mesh_Properties()
 
 k = k_global(len(vpe), vpe, material)

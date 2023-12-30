@@ -124,6 +124,13 @@ def Mesh_Properties():
 
     print(mesh)
     
+    
+    
+    # Carregamento para cada nó
+    
+    pressure_nodes = np.array(df[['Loading']].values)
+    
+    print(pressure_nodes)
 
 
 
@@ -227,7 +234,7 @@ def Mesh_Properties():
     print(vpe)
 
     
-    return mesh, u_DOF, vpe, material
+    return mesh, u_DOF, vpe, material, pressure_nodes
 
 
 Mesh_Properties()

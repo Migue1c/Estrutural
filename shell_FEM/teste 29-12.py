@@ -384,6 +384,7 @@ def calculate_strains_stresses(displacements, vpe, mat):
         forças_N[i,:] += D @ (strains[i,:].T)
     forças_N[i+1,:] += D @ (strains[i+1,:].T)          
 
+    #tensoes_N vai ser uma matriz em que cada coluna corresponde a [sigma_sd, sigma_td, sigma_sf, sigma_tf], em que d(dentro) e f(fora) 
     tensoes_N = np.zeros((num_nodes, 4))
     for i in range(num_elements):
         t = vpe[i, 3]
@@ -400,7 +401,7 @@ def calculate_strains_stresses(displacements, vpe, mat):
     tensoes_N[i, :] = [sigma_sd, sigma_td, sigma_sf, sigma_tf]
     return strains, tensoes_N
 
-def tensões_VM(displacements, vpe, tensoes_N):
+def tensões_VM(displacements, vpe, tensoes_N):      #matriz de duas colunas em que a primeira corresponde a dentro da casca e a segunda a fora da casca
     num_nodes = int(len(displacements)/3)
     num_elements = len(vpe)
     VM = np.zeros((num_nodes, 2))
@@ -413,7 +414,7 @@ def tensões_VM(displacements, vpe, tensoes_N):
     VM[i,1] = np.sqrt(tensoes_N[i,1]**2 -tensoes_N[i,1]*tensoes_N[i,3] + tensoes_N[i,3]**2)
     return VM
 
-def FS(displacements, vpe, mat, VM, tensões_N):
+def FS(displacements, vpe, mat, VM, tensões_N):     #FSy - deformação plastica  FSu - rutura
     VM = tensões_VM(displacements, vpe, tensões_N)
     von_mises = np.zeros(len(VM))
     for i, row in enumerate(VM):

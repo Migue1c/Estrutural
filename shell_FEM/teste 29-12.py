@@ -185,7 +185,7 @@ def Mesh_Properties():
  
     u_DOF = u_DOF.reshape((-1, 1))
    
-    print(u_DOF)
+    #print(u_DOF)
  
    
  
@@ -232,7 +232,7 @@ def Mesh_Properties():
  
     vpe = np.array(vpe.values)
    
-    #print(vpe)
+    #print("vpe:\n",vpe)
  
    
     return mesh, u_DOF, vpe, material, pressure_nodes
@@ -488,6 +488,7 @@ def Carr_t(loading,t,t_col,P_col,press_max):
 
 #SOLUÇÃO
 
+
 #Function to reduce matrices
 def RedMatrix(m:np.ndarray, u_DOF:np.ndarray):
     	
@@ -509,8 +510,6 @@ def RedMatrix(m:np.ndarray, u_DOF:np.ndarray):
     
     return m_red
 
-
-
 #Function to add back the zeros
 def RdfMatrix(m:np.ndarray, u_DOF:np.ndarray):
     #lines only
@@ -525,8 +524,6 @@ def RdfMatrix(m:np.ndarray, u_DOF:np.ndarray):
         i += 1
     
     return m
-
-
 
 #Static Solution:
 def StaticSolver(k:np.ndarray, f:np.ndarray, u_DOF:np.ndarray):
@@ -543,8 +540,6 @@ def StaticSolver(k:np.ndarray, f:np.ndarray, u_DOF:np.ndarray):
 
     return u_global
 
-
-
 #Modal Solution:
 def ModalSolver(k:np.ndarray, m:np.ndarray, u_DOF:np.ndarray):
 
@@ -560,8 +555,6 @@ def ModalSolver(k:np.ndarray, m:np.ndarray, u_DOF:np.ndarray):
     eig_vect = RdfMatrix(eig_vect, u_DOF)
 
     return eig_vals, eig_vect
-
- 
 
 #Dinamic Solution:
 def DinamicSolver(m:np.ndarray, c:np.ndarray, k:np.ndarray, f:np.ndarray, x_0:np.ndarray, x_0_d:np.ndarray, u_DOF:np.ndarray, tk:float, delta_t:float, t_final:float):
@@ -658,12 +651,12 @@ def DinamicSolver(m:np.ndarray, c:np.ndarray, k:np.ndarray, f:np.ndarray, x_0:np
 mesh, u_DOF, vpe, material, pressure_nodes = Mesh_Properties()
 
 k = k_global(len(vpe), vpe, material)
-
 #print("matriz K \n", k)
 
 medium_p = medium_pressure(pressure_nodes, len(vpe))
 carr = loading(len(vpe), medium_p, vpe)
 f_vect = np.reshape(carr,(-1,1))
-print("vetor carregamento:\n",f_vect)
+#print("vetor carregamento:\n",f_vect)
+
 u_global = StaticSolver(k, f_vect, u_DOF)
 print("vetor deslocamentos:\n",u_global)

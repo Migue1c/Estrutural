@@ -185,7 +185,7 @@ def Mesh_Properties():
  
     u_DOF = u_DOF.reshape((-1, 1))
    
-    #print(u_DOF)
+    print(u_DOF)
  
    
  
@@ -436,7 +436,7 @@ def pressao(w,nev,nl,press_est,nn):
         y_axis = np.linspace(y[i],y[i+1],nev[i], endpoint=False)#y_axis = np.linspace(max(y), min(y), nev[i] + 1)#same
         pressure[w[i] - nev[i] : w[i]] += y_axis#press_node#create a two array matrix with the pressure in each node in the whole geometry
     pressure[-1] = press_est[-1]
-    print(pressure)
+    #print(pressure)
     return pressure
 
 
@@ -444,13 +444,13 @@ def medium_pressure(pressao, ne):
     press_medium = np.zeros(ne)
     for i in range(0, ne):
         press_medium[i] = (pressao[i+1] + pressao[i])/2
-    print(press_medium)
+    #print(press_medium)
     return press_medium
 
 
-def loading(ne: int, pressure) -> None:  # To be verified
+def loading(ne: int, pressure, vpe) -> None:  # To be verified
     global load_vct
-    global vpe
+    #global vpe
     load_vct = np.zeros(3 * (ne + 1))
     for i in range(0, ne):
         phi = vpe[i, 1]
@@ -459,7 +459,7 @@ def loading(ne: int, pressure) -> None:  # To be verified
         ef_press = np.array([0, pressure[i]])
         s1 = lambda s: (s + 1) / 2
         r = lambda s: ri + s1(s) * h * np.sin(phi)
-        integrand = lambda s: ef_press.dot(Pmatrix(s1(s), i, phi)) * (r(s))
+        integrand = lambda s: ef_press.dot(Pmatrix(s1(s), i, phi, vpe)) * (r(s))
         #I = np.empty((1, 6, 200), dtype=float)
         #for j, s in enumerate(np.linspace(-1, 1, 200)):
            # I[:, :, j] = integrand(s)
@@ -469,7 +469,7 @@ def loading(ne: int, pressure) -> None:  # To be verified
         load_vct[3 * i:3 * i + 6] = load_vct[3 * i:3 * i + 6] + 2 * np.pi * h * integral
     #print(load for load in load_vct)
     #print(load_vct.shape)
-    print(load_vct)
+    #print(load_vct)
     return load_vct
 
 
@@ -478,7 +478,7 @@ def Carr_t(loading,t,t_col,P_col,press_max):
     p_col_adim = P_col/press_max
     P_t = np.interp(t,t_col,p_col_adim)
     loading=loading*P_t
-    print(loading)
+    #print(loading)
     return loading
 
 
@@ -529,9 +529,6 @@ def RdfMatrix(m:np.ndarray, u_DOF:np.ndarray):
 
 
 #Static Solution:
-
-#Sistem of linear eqs.
-
 def StaticSolver(k:np.ndarray, f:np.ndarray, u_DOF:np.ndarray):
     
     #Reduce stiffness matrix and force vector
@@ -549,9 +546,6 @@ def StaticSolver(k:np.ndarray, f:np.ndarray, u_DOF:np.ndarray):
 
 
 #Modal Solution:
-
-#Eigenvalue problem
-
 def ModalSolver(k:np.ndarray, m:np.ndarray, u_DOF:np.ndarray):
 
     #Reduce stiffness and mass matrices
@@ -570,9 +564,6 @@ def ModalSolver(k:np.ndarray, m:np.ndarray, u_DOF:np.ndarray):
  
 
 #Dinamic Solution:
-
-#Newmark Method
-
 def DinamicSolver(m:np.ndarray, c:np.ndarray, k:np.ndarray, f:np.ndarray, x_0:np.ndarray, x_0_d:np.ndarray, u_DOF:np.ndarray, tk:float, delta_t:float, t_final:float):
 
     #Matrices to store results
@@ -668,8 +659,11 @@ mesh, u_DOF, vpe, material, pressure_nodes = Mesh_Properties()
 
 k = k_global(len(vpe), vpe, material)
 
-print("matriz K \n", k)
+#print("matriz K \n", k)
 
 medium_p = medium_pressure(pressure_nodes, len(vpe))
-loading(len(vpe), medium_p)
-print(loading)
+carr = loading(len(vpe), medium_p, vpe)
+f_vect = np.reshape(carr,(-1,1))
+print("vetor carregamento:\n",f_vect)
+u_global = StaticSolver(k, f_vect, u_DOF)
+print("vetor deslocamentos:\n",u_global)

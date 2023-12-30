@@ -654,6 +654,9 @@ def DinamicSolver(m:np.ndarray, c:np.ndarray, k:np.ndarray, f:np.ndarray, x_0:np
 
 
 
+
+
+
 mesh, u_DOF, vpe, material = Mesh_Properties()
 
 k = k_global(len(vpe), vpe, material)

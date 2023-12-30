@@ -557,7 +557,7 @@ def m_global(ne:int, vpe, mat, ni=1200, sparse=False) -> np.ndarray:
     return m_globalM
 
 def modal_analysis(ne, vpe, u_DOF, mat, ni=1200, sparse=False, is_called_from_dynamic=False):
-    k_globalM = k_global(ne, vpe, mat, ni, sparse)
+    k_M = k_global(ne, vpe, mat, ni, sparse)
     m_globalM = m_global(ne, vpe, mat, ni, sparse)
     if is_called_from_dynamic:
         natfreq = (np.sqrt(sp.linalg.eigh(k_globalM, m_globalM, eigvals_only=True))[0:2])/(2*np.pi)
@@ -565,8 +565,6 @@ def modal_analysis(ne, vpe, u_DOF, mat, ni=1200, sparse=False, is_called_from_dy
     else:
         ModalSolver(k_global,m_global, u_DOF)
     output = np.array[eig_vals,eig_vect]
-
-
 
 
 
@@ -636,8 +634,28 @@ def ModalSolver(k:np.ndarray, m:np.ndarray, u_DOF:np.ndarray):
     m_red = RedMatrix(m, u_DOF)
 
     #Solve the eigenvalue problem
+    '''
     a = np.linalg.inv(m_red) @ k_red
     eig_vals, eig_vect = np.linalg.eig(a)
+    print(eig_vals)
+    print("vetores proprios v1:\n",eig_vect)
+    '''
+    eig_vals, eig_vect = sp.linalg.eig(k_red, m_red)
+
+    #filter the results
+    eig_vals = np.reshape(eig_vals,(-1,1))
+    
+    i=int(len(eig_vals)-1)
+    while i>=0:
+        if eig_vals[i,0] <= 0:
+            eig_vals = np.delete(eig_vals, i, axis=0)
+            eig_vect = np.delete(eig_vect, i, axis=1)
+        i -= 1  
+    eig_vals = np.array(eig_vals,dtype=float)
+    print("lenght valores proprios:",len(eig_vals))
+    print("lenght vetores proprios:",np.shape(eig_vect)[1])
+
+    #print(eig_vals)
 
     #re-add zeros to the eigenvectors matrix
     eig_vect = RdfMatrix(eig_vect, u_DOF)
@@ -756,5 +774,17 @@ t_VM = tensões_VM(u_global, vpe, tensoes_N)
 #print(t_VM)
 
 fsy, fsu = FS(u_global, vpe, material, t_VM, tensoes_N)
-print("fsy\n",fsy)
-print("fsu\n",fsu)
+#print("fsy\n",fsy)
+#print("fsu\n",fsu)
+
+
+m = m_global(len(vpe), vpe, material, ni=1200, sparse=False)
+#print(m)
+
+eig_vals, eig_vect = ModalSolver(k, m, u_DOF)
+print("valores proprios:\n",eig_vals)
+print("vetores proprios:\n",eig_vect)
+
+natfreq = (np.sqrt(sp.linalg.eigh(k, m, eigvals_only=True))[0:2])/(2*np.pi)
+print("nat_freq1\n",natfreq[0])
+print("nat_freq2\n",natfreq[1])

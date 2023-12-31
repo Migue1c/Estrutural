@@ -739,8 +739,8 @@ def DinamicSolver(m:np.ndarray, c:np.ndarray, k:np.ndarray, f:np.ndarray, x_0:np
     while tk < t_final :
         
         #Force vector for current tk
-        # f = Carr_t(tk)
-        # f = RedMatrix(f, u_DOF)
+        f = Carr_t(loading, tk, t_col, P_col, press_max)
+        f = RedMatrix(f, u_DOF)
 
         #Starting value [x_d2_(0)]
         x_0_d2 = np.linalg.inv(m) @ (f - (c @ x_0_d ) - (k @ x_0))

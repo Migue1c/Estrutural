@@ -794,7 +794,7 @@ k = k_global(len(vpe), vpe, material)
 medium_p = medium_pressure(pressure_nodes, len(vpe))
 #carr = loading(len(vpe), vpe, medium_p)
 #print(carr)
-#f_vect = np.reshape(carr,(-1,1))
+f_vect = np.reshape(carr,(-1,1))
 #print("vetor carregamento:\n",f_vect)
 
 u_global = StaticSolver(k, f_vect, u_DOF)

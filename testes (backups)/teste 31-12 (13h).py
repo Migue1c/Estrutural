@@ -583,7 +583,7 @@ def modal_analysis(ne, vpe, u_DOF, mat, ni=1200, sparse=False, is_called_from_dy
     output = np.array[eig_vals,eig_vect]
 
 def modal(eig_vals):
-    natfreq = (np.sqrt(eig_vals)[0:2])/(2*np.pi)
+    natfreq = np.sqrt(eig_vals)[0:2]
     return natfreq[0], natfreq[1]
 
 

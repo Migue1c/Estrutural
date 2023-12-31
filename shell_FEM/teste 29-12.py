@@ -476,28 +476,39 @@ def medium_pressure(pressao, ne):
     return press_medium
 
 
-def loading(ne: int, pressure, vpe) -> None:  # To be verified
+def loading(ne: int, pressure) -> None:  # To be verified
     global load_vct
-    #global vpe
+    global vpe
     load_vct = np.zeros(3 * (ne + 1))
     for i in range(0, ne):
         phi = vpe[i, 1]
         ri = vpe[i, 0]
-        h = vpe[i, 2]
-        ef_press = np.array([0, pressure[i]])
-        s1 = lambda s: (s + 1) / 2
-        r = lambda s: ri + s1(s) * h * np.sin(phi)
-        integrand = lambda s: ef_press.dot(Pmatrix(s1(s), i, phi, vpe)) * (r(s))
+        hi = vpe[i, 2]
+        p = pressure[i]
+        #print(phi, ri, hi, p)
+        v_carr = np.zeros(6)
+        A11 = 0.5 * ri * (-np.sin(phi)) - (3 / 20) * np.sin(phi) ** 2 * hi
+        A12 = 0.5 * ri * np.cos(phi) - (3 / 20) * np.sin(phi) * np.cos(phi) * hi
+        A13 = hi * ((1 / 3) * ri + (1 / 30) * hi * np.sin(phi))
+        A14 = 0.5 * ri * (-np.sin(phi)) - (7 / 20) * hi * np.sin(phi) ** 2
+        A15 = 0.5 * ri * np.cos(phi) + (7 / 20) * hi * np.sin(phi) * np.cos(phi)
+        A16 = hi * (-(1 / 12) * ri - (1 / 20) * hi * np.sin(phi))
+        v_carr = 2*np.pi*hi*p*np.array([A11, A12, A13, A14, A15, A16])
+        #print(v_carr)
+        #ef_press = np.array([0, pressure[i]])
+        #s1 = lambda s: (s + 1) / 2
+        #r = lambda s: ri + s1(s) * hi * np.sin(phi)
+        #integrand = lambda s: ef_press.dot(Pmatrix(s1(s), i, phi)) * (r(s))
         #I = np.empty((1, 6, 200), dtype=float)
         #for j, s in enumerate(np.linspace(-1, 1, 200)):
            # I[:, :, j] = integrand(s)
         #integral = 2 * np.pi * h * sp.integrate.simpson(I, x=None, dx=h / 199, axis=-1)
         #print(integral)
-        integral = 0.347854845 * integrand(-0.861136312) + 0.652145155 * integrand(-0.339981044) + 0.652145155 * integrand(0.339981044) + 0.347854845 * integrand(0.861136312)
-        load_vct[3 * i:3 * i + 6] = load_vct[3 * i:3 * i + 6] + 2 * np.pi * h * integral
+        #integral = 0.347854845 * integrand(-0.861136312) + 0.652145155 * integrand(-0.339981044) + 0.652145155 * integrand(0.339981044) + 0.347854845 * integrand(0.861136312)
+        load_vct[3 * i:3 * i + 6] = load_vct[3 * i:3 * i + 6] + v_carr
     #print(load for load in load_vct)
     #print(load_vct.shape)
-    #print(load_vct)
+    print(load_vct)
     return load_vct
 
 
@@ -508,6 +519,13 @@ def Carr_t(loading,t,t_col,P_col,press_max):
     loading=loading*P_t
     #print(loading)
     return loading
+
+
+
+
+
+
+
 
 
 
@@ -566,6 +584,22 @@ def modal_analysis(ne, vpe, u_DOF, mat, ni=1200, sparse=False, is_called_from_dy
         ModalSolver(k_global,m_global, u_DOF)
     output = np.array[eig_vals,eig_vect]
 
+
+
+
+
+
+#DINÂMICA
+
+def c_global(k_globalM, m_globalM, mode1:float, mode2:float, zeta1=0.08, zeta2=0.08):
+    # Pressuposes that the global matrices k_globalM and m_globalM are already reduced
+
+    fraction = 2*mode1*mode2/(mode2**2-mode1**2)
+    alfa = fraction*(mode2*zeta1-mode1*zeta2)
+    beta = fraction*(zeta2/mode1-zeta1/mode2)
+
+    c_globalM = alfa*m_globalM + beta*k_globalM
+    return c_globalM
 
 
 

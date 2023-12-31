@@ -1,9 +1,9 @@
 import numpy as np
 import math
-import scipy as sc
-from stactic import k_global
-from modal import m_global
-from dynamic import c_global
+import scipy as sp
+#from stactic import k_global
+#from modal import m_global
+#from dynamic import c_global
 #from loading import Carr_t
 #from mesh import u_DOF
 

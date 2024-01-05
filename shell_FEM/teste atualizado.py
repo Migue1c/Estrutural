@@ -572,7 +572,7 @@ def m_global(ne:int, vpe, mat, ni=1200, sparse=False) -> np.ndarray:
             m_globalM[3*i:3*i+6,3*i:3*i+6] = m_globalM[3*i:3*i+6,3*i:3*i+6] + mes[:,:,i]
     return m_globalM
 
-def modal_analysis(ne, vpe, u_DOF, mat, ni=1200, sparse=False, is_called_from_dynamic=False):
+#def modal_analysis(ne, vpe, u_DOF, mat, ni=1200, sparse=False, is_called_from_dynamic=False):
     k_M = k_global(ne, vpe, mat, ni, sparse)
     m_globalM = m_global(ne, vpe, mat, ni, sparse)
     if is_called_from_dynamic:
@@ -583,7 +583,7 @@ def modal_analysis(ne, vpe, u_DOF, mat, ni=1200, sparse=False, is_called_from_dy
     output = np.array[eig_vals,eig_vect]
 
 def modal(eig_vals):
-    natfreq = np.sqrt(eig_vals)[0:2]
+    natfreq = (np.sqrt(eig_vals)[0:2])/(2*np.pi)
     return natfreq[0], natfreq[1]
 
 
@@ -739,8 +739,8 @@ def DinamicSolver(m:np.ndarray, c:np.ndarray, k:np.ndarray, f:np.ndarray, x_0:np
     while tk < t_final :
         
         #Force vector for current tk
-        f = Carr_t(loading, tk, t_col, P_col, press_max)
-        f = RedMatrix(f, u_DOF)
+        # f = Carr_t(tk)
+        # f = RedMatrix(f, u_DOF)
 
         #Starting value [x_d2_(0)]
         x_0_d2 = np.linalg.inv(m) @ (f - (c @ x_0_d ) - (k @ x_0))
@@ -824,7 +824,7 @@ natfreq1, natfreq2 = modal(eig_vals)
 
 
 c = c_global(k, m, natfreq1, natfreq2)
-#print(c)
+print(c)
 
 
 

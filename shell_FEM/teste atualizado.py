@@ -387,6 +387,7 @@ def calculate_strains_stresses(displacements, vpe, mat):
     num_nodes = int(len(displacements)/3)
     num_elements = len(vpe)
 
+
     strains = np.zeros((num_nodes, 4))  # Matriz para armazenar as deformações de cada nó (epsilon_s, epsilon_theta, chi_s, chi_theta)
     for i in range(num_elements):
         R = vpe[i,0]
@@ -477,18 +478,6 @@ def FS(displacements, vpe, mat, VM, tensões_N):     #FSy - deformação plastic
 
 #CARREGAMENTO
 
-def pressao(w,nev,nl,press_est,nn):
-    pressure = np.zeros(nn)
-    for i in range(0, nl):
-        #y = np.array([df.loc[i, 'pressure'], df.loc[i+1, 'pressure']]) #same
-        y = press_est
-        y_axis = np.linspace(y[i],y[i+1],nev[i], endpoint=False)#y_axis = np.linspace(max(y), min(y), nev[i] + 1)#same
-        pressure[w[i] - nev[i] : w[i]] += y_axis#press_node#create a two array matrix with the pressure in each node in the whole geometry
-    pressure[-1] = press_est[-1]
-    #print(pressure)
-    return pressure
-
-
 def medium_pressure(pressao, ne):
     press_medium = np.zeros(ne)
     for i in range(0, ne):
@@ -503,7 +492,7 @@ def loading(ne: int, vpe, pressure) -> None:  # To be verified
         phi = vpe[i, 1]
         ri = vpe[i, 0]
         hi = vpe[i, 2]
-        p = pressure[i]
+        p = pressure[i] * (10**5)
         #print(phi, ri, hi, p)
         v_carr = np.zeros(6)
         A11 = 0.5 * ri * (-np.sin(phi)) - (3 / 20) * np.sin(phi) ** 2 * hi
@@ -531,7 +520,9 @@ def loading(ne: int, vpe, pressure) -> None:  # To be verified
     return load_vct
 
 
-def Carr_t(loading,t,t_col,P_col,press_max):
+def Carr_t(loading,t,t_col,P_col):
+    P_col = P_col * (10**5)
+    press_max = np.amax(P_col)
     p_col_adim = np.zeros(np.size(P_col))
     p_col_adim = P_col/press_max
     P_t = np.interp(t,t_col,p_col_adim)
@@ -716,7 +707,7 @@ def ModalSolver(k:np.ndarray, m:np.ndarray, u_DOF:np.ndarray):
     return eig_vals, eig_vect
 
 #Dinamic Solution:
-def DinamicSolver(m:np.ndarray, c:np.ndarray, k:np.ndarray, f:np.ndarray, x_0:np.ndarray, x_0_d:np.ndarray, u_DOF:np.ndarray, tk:float, delta_t:float, t_final:float, loading, t_col, P_col, press_max):
+def DinamicSolver(m:np.ndarray, c:np.ndarray, k:np.ndarray, f:np.ndarray, x_0:np.ndarray, x_0_d:np.ndarray, u_DOF:np.ndarray, tk:float, delta_t:float, t_final:float, loading, t_col, P_col):
 
     #Matrices to store results
     global matrix_u
@@ -724,7 +715,7 @@ def DinamicSolver(m:np.ndarray, c:np.ndarray, k:np.ndarray, f:np.ndarray, x_0:np
     global matrix_ud2   
 
     #Starting value for the force vector
-    f = Carr_t(loading, tk, t_col, P_col, press_max)
+    f = Carr_t(loading, tk, t_col, P_col)
 
     #Reduce Matrices
     k = RedMatrix(k, u_DOF)
@@ -760,8 +751,8 @@ def DinamicSolver(m:np.ndarray, c:np.ndarray, k:np.ndarray, f:np.ndarray, x_0:np
     while tk < t_final :
         
         #Force vector for current tk
-        # f = Carr_t(tk)
-        # f = RedMatrix(f, u_DOF)
+        f = Carr_t(loading, tk, t_col, P_col)
+        f = RedMatrix(f, u_DOF)
 
         #Starting value [x_d2_(0)]
         x_0_d2 = np.linalg.inv(m) @ (f - (c @ x_0_d ) - (k @ x_0))
@@ -809,6 +800,7 @@ def DinamicSolver(m:np.ndarray, c:np.ndarray, k:np.ndarray, f:np.ndarray, x_0:np
 
 mesh, u_DOF, vpe, material, pressure_nodes, t_col, P_col = Mesh_Properties()
 
+
 k = k_global(len(vpe), vpe, material)
 #print("matriz K \n", k)
 
@@ -817,6 +809,7 @@ carr = loading(len(vpe), vpe, medium_p)
 #print(carr)
 f_vect = np.reshape(carr,(-1,1))
 #print("vetor carregamento:\n",f_vect)
+
 
 u_global = StaticSolver(k, f_vect, u_DOF)
 #print("vetor deslocamentos:\n",u_global)
@@ -846,3 +839,5 @@ natfreq1, natfreq2 = modal(eig_vals)
 
 c = c_global(k, m, natfreq1, natfreq2)
 print(c)
+
+#DinamicSolver(m:np.ndarray, c:np.ndarray, k:np.ndarray, f:np.ndarray, x_0:np.ndarray, x_0_d:np.ndarray, u_DOF:np.ndarray, tk:float, delta_t:float, t_final:float, loading, t_col, P_col)

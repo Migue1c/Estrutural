@@ -264,6 +264,9 @@ def Mesh_Properties():
 
 Mesh_Properties()
 
+
+
+
 """
  #Graphic of the points
 df.plot(x='r', y='z', marker='o', linestyle='-', color='k', label='Nós')

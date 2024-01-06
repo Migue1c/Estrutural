@@ -825,12 +825,3 @@ natfreq1, natfreq2 = modal(eig_vals)
 
 c = c_global(k, m, natfreq1, natfreq2)
 print(c)
-
-
-
-
-
-
-
-
-

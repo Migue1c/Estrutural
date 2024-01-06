@@ -486,8 +486,8 @@ def loading(ne: int, vpe, pressure) -> None:  # To be verified
         #print(phi, ri, hi, p)
         v_carr = np.zeros(6)
         A11 = 0.5 * ri * (-np.sin(phi)) - (3 / 20) * np.sin(phi) ** 2 * hi
-        A12 = 0.5 * ri * np.cos(phi) - (3 / 20) * np.sin(phi) * np.cos(phi) * hi
-        A13 = hi * ((1 / 3) * ri + (1 / 30) * hi * np.sin(phi))
+        A12 = 0.5 * ri * np.cos(phi) + (3 / 20) * np.sin(phi) * np.cos(phi) * hi
+        A13 = hi * ((1 / 12) * ri + (1 / 30) * hi * np.sin(phi))
         A14 = 0.5 * ri * (-np.sin(phi)) - (7 / 20) * hi * np.sin(phi) ** 2
         A15 = 0.5 * ri * np.cos(phi) + (7 / 20) * hi * np.sin(phi) * np.cos(phi)
         A16 = hi * (-(1 / 12) * ri - (1 / 20) * hi * np.sin(phi))

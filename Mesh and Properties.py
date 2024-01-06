@@ -40,8 +40,8 @@ def Mesh_Properties():
     t_col = np.array(df_loading[['t']].values)  #column vector
     print(t_col)
     
-    P_col = np.array(df_loading[['p1']].values) #column vector
-    print(P_col)
+    p_col = np.array(df_loading[['p1']].values) #column vector
+    print(p_col)
     
 
     
@@ -255,7 +255,7 @@ def Mesh_Properties():
     print(vpe)
 
     
-    return mesh, u_DOF, vpe, material, pressure_nodes, t_col, P_col
+    return mesh, u_DOF, vpe, material, pressure_nodes, t_col, p_col
 
 
 Mesh_Properties()

@@ -13,6 +13,12 @@ def Mesh_Properties():
     df_matcols  = pd.read_excel('Livro1.xlsx', sheet_name = 'Materials', usecols = [0], nrows = 1)
     m           = int(df_matcols.iloc[0, 0])
     matcols     = list(range(3, 3 + m))
+    
+    # Number of lines to read, for the loading
+    df_loading_read = pd.read_excel('Livro1.xlsx', sheet_name = 'Loading', usecols = ['NumRowsRead'], nrows = 1)
+    k2              = int(df_loading_read.loc[0, 'NumRowsRead'])
+
+    
 
     # Reading the Input Data / Creating DataFrames
     df_read     = ['Points','z','r','thi','Conditions','Material','Conditions1','Nn', 'Loading'] 
@@ -22,9 +28,24 @@ def Mesh_Properties():
 
     df_mat      = pd.read_excel('Livro1.xlsx', sheet_name = 'Materials', usecols = matcols, nrows = 7)
     
-    print(df_mat)
+    #print(df_mat)
     
-    # Matriz com as propriedades do material
+    df_loading  = ['t', 'p1']
+    df_loading  = pd.read_excel('Livro1.xlsx', sheet_name = 'Loading', usecols = df_loading, nrows = k2)
+    
+    print(df_loading)
+    
+    # Loading matrix 
+    
+    t_col = np.array(df_loading[['t']].values)  #column vector
+    print(t_col)
+    
+    P_col = np.array(df_loading[['p1']].values) #column vector
+    print(P_col)
+    
+
+    
+    # Matrix with the properties of the materials
     
     material = np.array(df_mat.values)
     
@@ -234,10 +255,25 @@ def Mesh_Properties():
     print(vpe)
 
     
-    return mesh, u_DOF, vpe, material, pressure_nodes
+    return mesh, u_DOF, vpe, material, pressure_nodes, t_col, P_col
 
 
 Mesh_Properties()
+
+
+
+def AnalysisType():
+    
+    # Reading the analysis the user wants
+    analysis_columns = pd.read_excel('Livro1.xlsx', sheet_name = 'Input', usecols = ['Static', 'Modal', 'Dynamic'], nrows = 1)
+    
+    print(analysis_columns)
+    
+AnalysisType()
+    
+    
+    
+    
 
 """
  #Graphic of the points

@@ -2,6 +2,10 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import math
+import scipy as sp
+from matplotlib.colors import Normalize
+from mpl_toolkits.mplot3d import Axes3D
+import os
 
 def Mesh_Properties():
 

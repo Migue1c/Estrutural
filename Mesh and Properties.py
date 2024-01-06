@@ -2,10 +2,6 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import math
-import scipy as sp
-from matplotlib.colors import Normalize
-from mpl_toolkits.mplot3d import Axes3D
-import os
 
 def Mesh_Properties():
 
@@ -44,8 +40,8 @@ def Mesh_Properties():
     t_col = np.array(df_loading[['t']].values)  #column vector
     print(t_col)
     
-    p_col = np.array(df_loading[['p1']].values) #column vector
-    print(p_col)
+    P_col = np.array(df_loading[['p1']].values) #column vector
+    print(P_col)
     
 
     
@@ -259,13 +255,25 @@ def Mesh_Properties():
     print(vpe)
 
     
-    return mesh, u_DOF, vpe, material, pressure_nodes, t_col, p_col
+    return mesh, u_DOF, vpe, material, pressure_nodes, t_col, P_col
 
 
 Mesh_Properties()
 
 
 
+def AnalysisType():
+    
+    # Reading the analysis the user wants
+    analysis_columns = pd.read_excel('Livro1.xlsx', sheet_name = 'Input', usecols = ['Static', 'Modal', 'Dynamic'], nrows = 1)
+    
+    print(analysis_columns)
+    
+AnalysisType()
+    
+    
+    
+    
 
 """
  #Graphic of the points

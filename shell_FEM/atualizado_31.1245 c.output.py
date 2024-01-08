@@ -371,7 +371,7 @@ def calculate_strains_stresses(displacements, vpe, mat):
     num_nodes = int(len(displacements)/3)
     num_elements = len(vpe)
 
-    strains = np.zeros((num_nodes, 4))  # Matriz para armazenar as deformações de cada nó (epsilon_s, epsilon_theta, chi_s, chi_theta)
+    strains = np.zeros((num_nodes, 4))  #Matriz para armazenar as deformações de cada nó (epsilon_s, epsilon_theta, chi_s, chi_theta)
     for i in range(num_elements):
         R = vpe[i,0]
         phi = vpe[i,1]

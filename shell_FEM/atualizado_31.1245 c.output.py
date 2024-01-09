@@ -322,9 +322,9 @@ def Kestacked(ne:int, vpe, mat, ni:int, simpson=True) -> np.ndarray: # Incoehere
             for j, s1 in enumerate(np.linspace(0,1,ni+1)):
                 r = ri + s1*h*np.sin(phi)
                 B = Bmatrix(s1,i,r,phi, vpe)
-                I[:,:,j] = B.T@D@B*(r)
+                I[:,:,j] = (r)*B.T@D@B
 
-            ke = 2*np.pi*h*sp.integrate.simpson(I, x=None, dx=h/ni, axis=-1)
+            ke = 2*sp.pi*h*sp.integrate.simpson(I, x=None, dx=h/ni, axis=-1)
             #print(ke, '\n')
         else:
             s1_ = lambda s: (s+1)/2
@@ -336,6 +336,7 @@ def Kestacked(ne:int, vpe, mat, ni:int, simpson=True) -> np.ndarray: # Incoehere
     return kes
 
 def k_global(ne:int, vpe, mat, ni=1200, sparse=False) -> np.ndarray:
+    global k_globalM
     kes = Kestacked(ne, vpe, mat, ni)
     if sparse:
         row = []

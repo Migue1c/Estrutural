@@ -381,7 +381,7 @@ def Pmatrix(s1:float, index:int, phi:float, vpe) -> np.ndarray:
     #print(Pj)
     return np.hstack((Pi@T, Pj@T))
 
-def Kestacked(ne:int, vpe, mat, ni:int, simpson=False) -> np.ndarray: # Incoeherent integration results
+def Kestacked(ne:int, vpe, mat, ni:int, simpson=True) -> np.ndarray: # Incoeherent integration results
     kes = np.empty((6,6,ne), dtype=float)
     for i in range(0, ne):
         phi = vpe[i, 1]
@@ -404,7 +404,7 @@ def Kestacked(ne:int, vpe, mat, ni:int, simpson=False) -> np.ndarray: # Incoeher
             ke = 2*np.pi*h*((5/9)*integrand(-np.sqrt(3/5))+(8/9)*integrand(0)+(5/9)*integrand(np.sqrt(3/5)))
             #print(ke)
         kes[:,:,i] = ke
-        print(ke)
+        
     return kes
 
 def k_global(ne:int, vpe, mat, ni=1200, sparse=False) -> np.ndarray:

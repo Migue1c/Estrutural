@@ -340,7 +340,7 @@ def Kestacked(ne:int, vpe, mat, ni:int, simpson=True) -> np.ndarray: # Incoehere
                 B = Bmatrix(s1,i,r,phi, vpe)
                 I[:,:,j] = B.T@D@B*(r)
 
-            ke = 2*np.pi*h*sp.integrate.simpson(I, x=None, dx=h/ni, axis=-1)
+            ke = 2*np.pi*h*sp.integrate.simpson(I, x=None, dx=1/ni, axis=-1)
             #print(ke, '\n')
         else:
             s1_ = lambda s: (s+1)/2
@@ -556,7 +556,7 @@ def Mestacked(ne:int, vpe, mat, ni:int, simpson=True) -> np.ndarray:
                 P = Pmatrix(s1,i,phi, vpe)
                 I[:,:,j] = (r)*P.T@P
 
-            me = rho*t*2*sp.pi*h*sp.integrate.simpson(I, x=None, dx=h/ni, axis=-1)
+            me = rho*t*2*sp.pi*h*sp.integrate.simpson(I, x=None, dx=1/ni, axis=-1)
         #print('The mass matrix is:\n', me)
         mes[:,:,i] = me
     return mes

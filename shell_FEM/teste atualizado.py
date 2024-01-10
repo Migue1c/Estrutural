@@ -297,9 +297,9 @@ def Bj(s1:float, index:int, r:float, vpe) -> np.ndarray:
                      [0, -6*s1*(1-s1)*sen_phi/(r*h), s1*(2-3*s1)*sen_phi/r]])
 
 def elastM(index:int, vpe, mat) -> np.ndarray:
-    E = mat[int(vpe[index, 4]), 1] # mat must have more than one material so that the array is 2D by default
+    E = mat[1, int(vpe[index, 4])-1] # mat must have more than one material so that the array is 2D by default
     t = vpe[index, 3]
-    upsilon = mat[int(vpe[index, 4]), 2]
+    upsilon = mat[2, int(vpe[index, 4])-1]
     D = (E*t)/(1-upsilon**2)*np.array([[1,upsilon, 0, 0],[upsilon, 1, 0, 0],[0, 0, (t**2/12), upsilon*(t**2/12)],[0, 0, upsilon*(t**2/12), (t**2/12)]])
                                                                                                                                     
     return D
@@ -445,14 +445,14 @@ def FS(displacements, vpe, mat, VM, tensões_N):     #FSy - deformação plastic
     FSy = np.empty((ne+1))
     FSU = np.empty((ne+1))
     for i in range(ne):
-        FSy[i] = mat[3 ,int(vpe[i,4])]/von_mises[i]
+        FSy[i] = mat[3 ,int(vpe[i,4])-1]/von_mises[i]    
         FSc = 10**6
         FSt = FSc
         if np.any(tensões_N[i,:] < 0):
-            FSc = mat[5, int(vpe[i,4])] / np.min(tensões_N[i,:])
+            FSc = mat[5, int(vpe[i,4])-1] / np.min(tensões_N[i,:])
             #print(min(tensões_N[i,:]))
         if np.any(tensões_N[i,:] > 0):
-            FSt = mat[4 ,int(vpe[i,4])] / np.max(tensões_N[i,:])
+            FSt = mat[4 ,int(vpe[i,4])-1] / np.max(tensões_N[i,:])
             #print(FSt)
         if np.abs(FSt) < np.abs(FSc):
             FSU[i] = FSt
@@ -544,7 +544,7 @@ def Carr_t(loading,t,t_col,P_col):
 def Mestacked(ne:int, vpe, mat, ni:int, simpson=True) -> np.ndarray:
     mes = np.empty((6,6,ne), dtype=float)
     for i in range(0, ne):
-        rho = mat[int(vpe[i, 4]), 0] # Specific mass for the material in the i-th element
+        rho = mat[int(vpe[i, 4])-1, 0] # Specific mass for the material in the i-th element
         t = vpe[i,3]
         h = vpe[i, 2]
         phi = vpe[i, 1]

@@ -3,50 +3,61 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import math
 import scipy as sp
-import warnings
 
 def Mesh_Properties():
 
     # Number of Points to read
-    df_num_rows  = pd.read_excel('Livro1.xlsx', sheet_name = 'Input', usecols = ['NumRowsRead'], nrows = 1)
+    df_num_rows  = pd.read_excel('shell_FEM\Livro2.xlsx', sheet_name = 'Input', usecols = ['NumRowsRead'], nrows = 1)
     k            = int(df_num_rows.loc[0, 'NumRowsRead'])
 
     #Materials to read
-    df_matcols  = pd.read_excel('Livro1.xlsx', sheet_name = 'Materials', usecols = [0], nrows = 1)
+    df_matcols  = pd.read_excel('shell_FEM\Livro2.xlsx', sheet_name = 'Materials', usecols = [0], nrows = 1)
     m           = int(df_matcols.iloc[0, 0])
     matcols     = list(range(3, 3 + m))
     
     # Number of lines to read, for the loading
-    df_loading_read = pd.read_excel('Livro1.xlsx', sheet_name = 'Loading', usecols = ['NumRowsRead'], nrows = 1)
+    df_loading_read = pd.read_excel('shell_FEM\Livro2.xlsx', sheet_name = 'Loading', usecols = ['NumRowsRead'], nrows = 1)
     k2              = int(df_loading_read.loc[0, 'NumRowsRead'])
 
-    # Reading the Input Data / Creating DataFrames
-    df_read     = ['Points','z','r','thi','Conditions','Material','Conditions1','Nn', 'Loading', 'Discontinuity'] 
-    df          = pd.read_excel('Livro1.xlsx', sheet_name = 'Input', usecols = df_read, nrows = k) 
-                                                                                    
-    df_info     = pd.read_excel('Livro1.xlsx', sheet_name = 'Input', usecols = ['Discontinuity'], nrows = k)
+    
 
-    df_mat      = pd.read_excel('Livro1.xlsx', sheet_name = 'Materials', usecols = matcols, nrows = 7)
+    # Reading the Input Data / Creating DataFrames
+    df_read     = ['Points','z','r','thi','Conditions','Material','Conditions1','Nn', 'Loading'] 
+    df          = pd.read_excel('shell_FEM\Livro2.xlsx', sheet_name = 'Input', usecols = df_read, nrows = k) 
+                                                                                    
+    df_info     = pd.read_excel('shell_FEM\Livro2.xlsx', sheet_name = 'Input', usecols = ['Discontinuity'], nrows = k)
+
+    df_mat      = pd.read_excel('shell_FEM\Livro2.xlsx', sheet_name = 'Materials', usecols = matcols, nrows = 7)
     
     #print(df_mat)
     
     df_loading  = ['t', 'p1']
-    df_loading  = pd.read_excel('Livro1.xlsx', sheet_name = 'Loading', usecols = df_loading, nrows = k2)
+    df_loading  = pd.read_excel('shell_FEM\Livro2.xlsx', sheet_name = 'Loading', usecols = df_loading, nrows = k2)
     
     #print(df_loading)
     
     # Loading matrix 
+    
     t_col = np.array(df_loading[['t']].values)  #column vector
     #print(t_col)
     
     P_col = np.array(df_loading[['p1']].values) #column vector
     #print(P_col)
     
+
+    
     # Matrix with the properties of the materials
+    
     material = np.array(df_mat.values)
     
     #print(material)
 
+    """
+    df.plot(x='r', y='z', marker='o', linestyle='-', color='k', label='Nós')
+    plt.gca().invert_yaxis()
+    plt.legend(loc='center left')
+    plt.show()
+    """
 
     # Creates a DataFrame with the same columns, but with no values
     empty_df        = pd.DataFrame([[None]*len(df_read)], columns = df_read)
@@ -74,8 +85,7 @@ def Mesh_Properties():
                 'Nn'            : [df.loc[i, 'Nn']],
                 'Conditions1'   : [df.loc[i, 'Conditions1']],
                 'Material'      : [df.loc[i, 'Material']],
-                'Loading'       : [df.loc[i, 'Loading']],
-                'Discontinuity' : [df.loc[i, 'Discontinuity']]
+                'Loading'       : [df.loc[i, 'Loading']]
                                     })
             
             df_add2 = pd.DataFrame  ({
@@ -120,84 +130,10 @@ def Mesh_Properties():
             df.loc[i,'Conditions1']     = df.loc[i-1, 'Conditions1']
             df.loc[i,'Material']        = df.loc[i-1, 'Material']
         i += 1  
-    
-    
-    # Creating the Mesh, with a higher density of elements close to nodes with Boundary Conditions or Discontinuity
-    
-        #Calcular o vetor de direção entre os nós iniciais
-        #Normalizar o vetor        
-        #Calcular o ponto e adicionar ao DataFrame
-            
-    i = 0
-    while i < (len(df['Points'])):
-        
-        if (df.loc[i, 'Nn'] > 0):
-            
-            point1 = np.array(df.loc[i, ['r','z']].values)
-            j = i + 1 + df.loc[i, 'Nn']
-            point2 = np.array(df.loc[j, ['r','z']].values)
-            
-            v = point2 - point1 # Direction Vector 
-            u = v / np.linalg.norm(v) # Normalize the direction vector
-            distance = np.linalg.norm(v) #Distance between points
-            
-            # If both points need more elements closer to them
-            if ( df.loc[i, 'Discontinuity'] == 1 or df.loc[i, 'Conditions'] != 7 ) and ( df.loc[j, 'Discontinuity'] == 1 or df.loc[j, 'Conditions'] != 7 ):
-                
-                
-                k = df.loc[i, 'Nn']
-                q = i
-                while k >= 1:
-                    
-                    add = (distance / 2) + ( math.cos( (math.pi / (df.loc[i, 'Nn'] + 1) )* k )) * (distance / 2) # distance to add from point1
-                    point3 = point1 + u*add
-                    df.loc[q+1, 'r'] = point3[0]
-                    df.loc[q+1, 'z'] = point3[1]
-                    
-                    k = k - 1
-                    q = q + 1
 
-            # If point 1 needs more elements closer
-            if ( df.loc[i, 'Discontinuity'] == 1 or df.loc[i, 'Conditions'] != 7 ) and ( df.loc[j, 'Discontinuity'] == 0 and df.loc[j, 'Conditions'] == 7 ):
-            
-                k = 1
-                q = i
-                while k < df.loc[i, 'Nn']:
-                    
-                    add = ( math.cos( (((math.pi)/2) / (df.loc[i, 'Nn'] + 1) )* k )) * distance 
-                    point3 = point2 - u*add
-                    df.loc[q+1, 'r'] = point3[0]
-                    df.loc[q+1, 'z'] = point3[1]
-                    
-                    k = k + 1
-                    q = q + 1
-            
-            # If point2 needs more elements closer
-            if ( df.loc[i, 'Discontinuity'] == 0 and df.loc[i, 'Conditions'] == 7 ) and ( df.loc[j, 'Discontinuity'] == 1 or df.loc[j, 'Conditions'] != 7 ):
-              
-                k = df.loc[i, 'Nn']
-                q = i
-                while k >= 1:
-                    
-                    add = ( math.cos( (((math.pi)/2) / (df.loc[i, 'Nn'] + 1) )* k )) * distance 
-                    point3 = point1 + u*add
-                    df.loc[q+1, 'r'] = point3[0]
-                    df.loc[q+1, 'z'] = point3[1]
-                    
-                    k = k - 1
-                    q = q + 1
-                    
-            #If neither points need more elements, we add elements with the same length
-            if ( df.loc[i, 'Discontinuity'] == 0 and df.loc[i, 'Conditions'] == 7 ) and ( df.loc[j, 'Discontinuity'] == 0 and df.loc[j, 'Conditions'] == 7 ):
-                
-                columns_interpolate     = ['z', 'r']
-                df[columns_interpolate] = df[columns_interpolate].interpolate(method='linear')
 
-        i = i + 1
-        
-            
     # Interpolation Linear Type
-    columns_interpolate     = ['thi', 'Loading']
+    columns_interpolate     = ['z', 'r', 'thi', 'Loading']
     df[columns_interpolate] = df[columns_interpolate].interpolate(method='linear')
     df.loc[len(df)-1, 'thi'] = np.nan 
 
@@ -205,12 +141,17 @@ def Mesh_Properties():
 
 
     # Matriz com as coordenadas dos pontos / Malha
+
     mesh = np.array(df[['z','r']].values)
+
     #print(mesh)
     
     
+    
     # Carregamento para cada nó
+    
     pressure_nodes = np.array(df[['Loading']].values)
+    
     #print(pressure_nodes)
 
 
@@ -260,9 +201,17 @@ def Mesh_Properties():
 
 
     # Nome do Vetor construído com os dados da coluna "Value" : u_DOF
+
     u_DOF = np.array(Boundary_Conditions["Value"].values)
+
     u_DOF = u_DOF.reshape((-1, 1))
+    
     #print(u_DOF)
+
+    
+
+
+
 
     # Creation of DataFrame regarding the elements
     vpe =   {   'Node_i'    : [],
@@ -286,6 +235,7 @@ def Mesh_Properties():
         vpe     = result
 
 
+
     # Adding the other information
     for i in range(len(df)-1):
         vpe.loc[i, 'h'] = math.sqrt( (df.loc[i+1, 'z'] - df.loc[i, 'z'])**2 + (df.loc[i+1, 'r']-df.loc[i, 'r'])**2 )
@@ -302,14 +252,9 @@ def Mesh_Properties():
     #print(vpe)
 
     vpe = np.array(vpe.values)
-    #print(df)
-    """
-    #Graphic of the points
-    df.plot(x='r', y='z', marker='o', linestyle='-', color='k', label='Nós')
-    plt.gca().invert_yaxis()
-    plt.legend(loc='center left')
-    plt.show()
-    """
+    
+    #print(vpe)
+
     
     return mesh, u_DOF, vpe, material, pressure_nodes, t_col, P_col
 
@@ -393,9 +338,9 @@ def Kestacked(ne:int, vpe, mat, ni:int, simpson=True) -> np.ndarray: # Incoehere
             for j, s1 in enumerate(np.linspace(0,1,ni+1)):
                 r = ri + s1*h*np.sin(phi)
                 B = Bmatrix(s1,i,r,phi, vpe)
-                I[:,:,j] = (r)*B.T@D@B
+                I[:,:,j] = B.T@D@B*(r)
 
-            ke = 2*sp.pi*h*sp.integrate.simpson(I, x=None, dx=h/ni, axis=-1)
+            ke = 2*np.pi*h*sp.integrate.simpson(I, x=None, dx=1/ni, axis=-1)
             #print(ke, '\n')
         else:
             s1_ = lambda s: (s+1)/2
@@ -407,7 +352,6 @@ def Kestacked(ne:int, vpe, mat, ni:int, simpson=True) -> np.ndarray: # Incoehere
     return kes
 
 def k_global(ne:int, vpe, mat, ni=1200, sparse=False) -> np.ndarray:
-    global k_globalM
     kes = Kestacked(ne, vpe, mat, ni)
     if sparse:
         row = []
@@ -612,7 +556,7 @@ def Mestacked(ne:int, vpe, mat, ni:int, simpson=True) -> np.ndarray:
                 P = Pmatrix(s1,i,phi, vpe)
                 I[:,:,j] = (r)*P.T@P
 
-            me = rho*t*2*sp.pi*h*sp.integrate.simpson(I, x=None, dx=h/ni, axis=-1)
+            me = rho*t*2*sp.pi*h*sp.integrate.simpson(I, x=None, dx=1/ni, axis=-1)
         #print('The mass matrix is:\n', me)
         mes[:,:,i] = me
     return mes
@@ -848,87 +792,27 @@ def DinamicSolver(m:np.ndarray, c:np.ndarray, k:np.ndarray, f:np.ndarray, x_0:np
 
 
 
-# Ignorar o aviso específico
-warnings.filterwarnings("ignore", message="The behavior of DataFrame concatenation with empty or all-NA entries is deprecated.*")
-warnings.filterwarnings("ignore", message="Conversion of an array with ndim > 0 to a scalar is deprecated.*")
-warnings.filterwarnings("ignore", message="Casting complex values to real discards the imaginary part.*")
+
+
+
 
 
 
 mesh, u_DOF, vpe, material, pressure_nodes, t_col, P_col = Mesh_Properties()
 
+
 k = k_global(len(vpe), vpe, material)
-print("matriz K \n", k)
-'''
+#print("matriz K \n", k)
+
 medium_p = medium_pressure(pressure_nodes, len(vpe))
-carr = loading(len(vpe), vpe, medium_p) 
+carr = loading(len(vpe), vpe, medium_p)
 #print(carr)
 f_vect = np.reshape(carr,(-1,1))
 #print("vetor carregamento:\n",f_vect)
 
 
-lu = len(f_vect)
-print(lu)
-ld = int(lu/ 3)
-print(ld)
-f_z = np.zeros([ld,1])
-f_r = np.zeros([ld,1])
-f_theta = np.zeros([ld,1])
-i = 0
-j = 0
-while i < lu:
-    f_z[j,0] = f_vect[i,0]
-    j += 1
-    i += 3
-i = 1
-j = 0
-while i < lu:
-    f_r[j,0] = f_vect[i,0]
-    j += 1
-    i += 3
-f_z = np.append(f_z, f_r, axis=1)
-i = 2
-j = 0
-while i < lu:
-    f_theta[j,0] = f_vect[i,0]
-    j += 1
-    i += 3
-f_z = np.append(f_z, f_theta, axis=1)    
-print("Matriz carregamento:\n",f_z)
-
-
 u_global = StaticSolver(k, f_vect, u_DOF)
 #print("vetor deslocamentos:\n",u_global)
-
-
-lu = len(u_global)
-ld = int(lu/ 3)
-u_z = np.zeros([ld,1])
-u_r = np.zeros([ld,1])
-u_theta = np.zeros([ld,1])
-i = 0
-j = 0
-while i < lu:
-    u_z[j,0] = u_global[i,0]
-    j += 1
-    i += 3
-i = 1
-j = 0
-while i < lu:
-    u_r[j,0] = u_global[i,0]
-    j += 1
-    i += 3
-u_z = np.append(u_z, u_r, axis=1)  
-i = 2
-j = 0
-while i < lu:
-    u_theta[j,0] = u_global[i,0]
-    j += 1
-    i += 3
-u_z = np.append(u_z, u_theta, axis=1) 
-print("Matriz deslocamentos:\n",u_z)    
-
-
 
 strains, tensoes_N = calculate_strains_stresses(u_global, vpe, material)
 #print("strains:\n",strains)
@@ -942,7 +826,7 @@ fsy, fsu = FS(u_global, vpe, material, t_VM, tensoes_N)
 
 
 m = m_global(len(vpe), vpe, material, ni=1200, sparse=False)
-#print(m)
+print(m)
 
 eig_vals, eig_vect = ModalSolver(k, m, u_DOF)
 #print("valores proprios:\n",eig_vals)
@@ -954,7 +838,6 @@ natfreq1, natfreq2 = modal(eig_vals)
 
 
 c = c_global(k, m, natfreq1, natfreq2)
-print(c)
+#print(c)
 
 #DinamicSolver(m:np.ndarray, c:np.ndarray, k:np.ndarray, f:np.ndarray, x_0:np.ndarray, x_0_d:np.ndarray, u_DOF:np.ndarray, tk:float, delta_t:float, t_final:float, loading, t_col, P_col)
-'''

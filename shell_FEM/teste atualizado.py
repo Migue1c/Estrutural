@@ -352,9 +352,9 @@ def Bj(s1:float, index:int, r:float, vpe) -> np.ndarray:
                      [0, -6*s1*(1-s1)*sen_phi/(r*h), s1*(2-3*s1)*sen_phi/r]])
 
 def elastM(index:int, vpe, mat) -> np.ndarray:
-    E = mat[1 , int(vpe[index, 4])] # mat must have more than one material so that the array is 2D by default
+    E = mat[int(vpe[index, 4]), 1] # mat must have more than one material so that the array is 2D by default
     t = vpe[index, 3]
-    upsilon = mat[2 , int(vpe[index, 4])]
+    upsilon = mat[int(vpe[index, 4]), 2]
     D = (E*t)/(1-upsilon**2)*np.array([[1,upsilon, 0, 0],[upsilon, 1, 0, 0],[0, 0, (t**2/12), upsilon*(t**2/12)],[0, 0, upsilon*(t**2/12), (t**2/12)]])
                                                                                                                                     
     return D
@@ -393,9 +393,9 @@ def Kestacked(ne:int, vpe, mat, ni:int, simpson=True) -> np.ndarray: # Incoehere
             for j, s1 in enumerate(np.linspace(0,1,ni+1)):
                 r = ri + s1*h*np.sin(phi)
                 B = Bmatrix(s1,i,r,phi, vpe)
-                I[:,:,j] = B.T@D@B*(r)
+                I[:,:,j] = (r)*B.T@D@B
 
-            ke = 2*np.pi*h*sp.integrate.simpson(I, x=None, dx=h/ni, axis=-1)
+            ke = 2*sp.pi*h*sp.integrate.simpson(I, x=None, dx=h/ni, axis=-1)
             #print(ke, '\n')
         else:
             s1_ = lambda s: (s+1)/2
@@ -404,10 +404,10 @@ def Kestacked(ne:int, vpe, mat, ni:int, simpson=True) -> np.ndarray: # Incoehere
             ke = 2*np.pi*h*((5/9)*integrand(-np.sqrt(3/5))+(8/9)*integrand(0)+(5/9)*integrand(np.sqrt(3/5)))
             #print(ke)
         kes[:,:,i] = ke
-        
     return kes
 
 def k_global(ne:int, vpe, mat, ni=1200, sparse=False) -> np.ndarray:
+    global k_globalM
     kes = Kestacked(ne, vpe, mat, ni)
     if sparse:
         row = []

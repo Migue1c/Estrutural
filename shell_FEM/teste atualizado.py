@@ -200,7 +200,7 @@ def Mesh_Properties():
     df[columns_interpolate] = df[columns_interpolate].interpolate(method='linear')
     df.loc[len(df)-1, 'thi'] = np.nan 
 
-    print(df)
+    #print(df)
 
 
     # Matriz com as coordenadas dos pontos / Malha
@@ -856,8 +856,15 @@ mesh, u_DOF, vpe, material, pressure_nodes, t_col, P_col = Mesh_Properties()
 
 
 k = k_global(len(vpe), vpe, material)
-#print("matriz K \n", k)
+print("matriz K \n", k)
 
+m = m_global(len(vpe), vpe, material, ni=1200, sparse=False)  #duplicado
+print(m)
+
+
+
+
+'''
 medium_p = medium_pressure(pressure_nodes, len(vpe))
 carr = loading(len(vpe), vpe, medium_p)
 #print(carr)
@@ -895,3 +902,5 @@ c = c_global(k, m, natfreq1, natfreq2)
 #print(c)
 
 #DinamicSolver(m:np.ndarray, c:np.ndarray, k:np.ndarray, f:np.ndarray, x_0:np.ndarray, x_0_d:np.ndarray, u_DOF:np.ndarray, tk:float, delta_t:float, t_final:float, loading, t_col, P_col)
+
+'''

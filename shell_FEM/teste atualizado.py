@@ -857,7 +857,7 @@ mesh, u_DOF, vpe, material, pressure_nodes, t_col, P_col = Mesh_Properties()
 
 
 k = k_global(len(vpe), vpe, material)
-print("matriz K \n", k)
+#print("matriz K \n", k)
 
 
 medium_p = medium_pressure(pressure_nodes, len(vpe))

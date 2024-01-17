@@ -890,19 +890,21 @@ f_vect = np.reshape(carr,(-1,1))
 
 #print("vetor carregamento:\n",f_vect)
 u_global = StaticSolver(k, f_vect, u_DOF)
-print("vetor deslocamentos:\n",u_global)
+#print("vetor deslocamentos:\n",u_global)
 
 
 strains, tensoes_N = calculate_strains_stresses(u_global, vpe, material)
-#print("strains:\n",strains)
-#print("tensões:\n",tensoes_N)
+print("strains:\n",strains)
+print("tensões:\n",tensoes_N)
 t_VM = tensões_VM(u_global, vpe, tensoes_N)
 #print(t_VM)
 
 fsy, fsu = FS(u_global, vpe, material, t_VM, tensoes_N)
-#print("fsy\n",fsy)
-#print("fsu\n",fsu)
+print("fsy\n",fsy)
+print("fsu\n",fsu)
 
+
+'''
 m = m_global(len(vpe), vpe, material, ni=1200, sparse=False)
 m_df = pd.DataFrame(m)
 m_df.to_excel('m.xlsx', index=False)
@@ -922,3 +924,4 @@ c = c_global(k, m, natfreq1, natfreq2)
 #print(c)
 
 #DinamicSolver(m:np.ndarray, c:np.ndarray, k:np.ndarray, f:np.ndarray, x_0:np.ndarray, x_0_d:np.ndarray, u_DOF:np.ndarray, tk:float, delta_t:float, t_final:float, loading, t_col, P_col)
+'''

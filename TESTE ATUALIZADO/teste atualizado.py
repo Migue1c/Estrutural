@@ -906,8 +906,8 @@ print("fsu\n",fsu)
 
 '''
 m = m_global(len(vpe), vpe, material, ni=1200, sparse=False)
-m_df = pd.DataFrame(m)
-m_df.to_excel('m.xlsx', index=False)
+#m_df = pd.DataFrame(m)
+#m_df.to_excel('m.xlsx', index=False)
 #print(m)
 
 

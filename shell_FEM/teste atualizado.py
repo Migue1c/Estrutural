@@ -7,30 +7,30 @@ import scipy as sp
 def Mesh_Properties():
 
     # Number of Points to read
-    df_num_rows  = pd.read_excel('Livro2.xlsx', sheet_name = 'Input', usecols = ['NumRowsRead'], nrows = 1)
+    df_num_rows  = pd.read_excel('Livro1.xlsx', sheet_name = 'Input', usecols = ['NumRowsRead'], nrows = 1)
     k            = int(df_num_rows.loc[0, 'NumRowsRead'])
 
     #Materials to read
-    df_matcols  = pd.read_excel('Livro2.xlsx', sheet_name = 'Materials', usecols = [0], nrows = 1)
+    df_matcols  = pd.read_excel('Livro1.xlsx', sheet_name = 'Materials', usecols = [0], nrows = 1)
     m           = int(df_matcols.iloc[0, 0])
     matcols     = list(range(3, 3 + m))
     
     # Number of lines to read, for the loading
-    df_loading_read = pd.read_excel('Livro2.xlsx', sheet_name = 'Loading', usecols = ['NumRowsRead'], nrows = 1)
+    df_loading_read = pd.read_excel('Livro1.xlsx', sheet_name = 'Loading', usecols = ['NumRowsRead'], nrows = 1)
     k2              = int(df_loading_read.loc[0, 'NumRowsRead'])
 
     # Reading the Input Data / Creating DataFrames
     df_read     = ['Points','z','r','thi','Conditions','Material','Conditions1','Nn', 'Loading', 'Discontinuity'] 
-    df          = pd.read_excel('Livro2.xlsx', sheet_name = 'Input', usecols = df_read, nrows = k) 
+    df          = pd.read_excel('Livro1.xlsx', sheet_name = 'Input', usecols = df_read, nrows = k) 
                                                                                     
-    df_info     = pd.read_excel('Livro2.xlsx', sheet_name = 'Input', usecols = ['Discontinuity'], nrows = k)
+    df_info     = pd.read_excel('Livro1.xlsx', sheet_name = 'Input', usecols = ['Discontinuity'], nrows = k)
 
-    df_mat      = pd.read_excel('Livro2.xlsx', sheet_name = 'Materials', usecols = matcols, nrows = 7)
+    df_mat      = pd.read_excel('Livro1.xlsx', sheet_name = 'Materials', usecols = matcols, nrows = 7)
     
     #print(df_mat)
     
     df_loading  = ['t', 'p1']
-    df_loading  = pd.read_excel('Livro2.xlsx', sheet_name = 'Loading', usecols = df_loading, nrows = k2)
+    df_loading  = pd.read_excel('Livro1.xlsx', sheet_name = 'Loading', usecols = df_loading, nrows = k2)
     
     #print(df_loading)
     
@@ -38,19 +38,23 @@ def Mesh_Properties():
     t_col = np.array(df_loading[['t']].values)  #column vector
     #print(t_col)
     
-    P_col = np.array(df_loading[['p1']].values) #column vector
-    #print(P_col)
+    p_col = np.array(df_loading[['p1']].values) #column vector
+    #print(p_col)
     
     # Matrix with the properties of the materials
     material = np.array(df_mat.values)
     
     #print(material)
+    
+    #print(df)
 
 
     # Creates a DataFrame with the same columns, but with no values
-    empty_df        = pd.DataFrame([[None]*len(df_read)], columns = df_read)
+    empty_df        = pd.DataFrame(np.nan, index=[0], columns = df_read)
 
 
+    #print(empty_df)
+    
     #The first point can't be (0,0) due to mathematical issues
     if df.loc[0, 'r'] == 0:
 
@@ -95,8 +99,7 @@ def Mesh_Properties():
     i = 0
     while i < (len(df['Nn'])):
 
-        if df.loc[i, 'Nn' ] != 0:
-
+        if not pd.isna(df.loc[i, 'Nn']) and df.loc[i, 'Nn'] != 0:
             j=0
             while j < df.loc[i, 'Nn' ]:
 
@@ -108,6 +111,8 @@ def Mesh_Properties():
                 
         i +=1
 
+    #print(df)
+    
     # Complement information for the New Nodes
     i = 1
     while i < (len(df['Points'])):
@@ -118,7 +123,10 @@ def Mesh_Properties():
             df.loc[i, 'Conditions']     = df.loc[i-1, 'Conditions1']
             df.loc[i,'Conditions1']     = df.loc[i-1, 'Conditions1']
             df.loc[i,'Material']        = df.loc[i-1, 'Material']
+            df.loc[i,'Discontinuity']        = 0
         i += 1  
+    
+    #print(df)
     
     
     # Creating the Mesh, with a higher density of elements close to nodes with Boundary Conditions or Discontinuity
@@ -126,79 +134,89 @@ def Mesh_Properties():
         #Calcular o vetor de direção entre os nós iniciais
         #Normalizar o vetor        
         #Calcular o ponto e adicionar ao DataFrame
-            
-    i = 0
-    while i < (len(df['Points'])):
         
-        if (df.loc[i, 'Nn'] > 0):
+    if 1==0: ################## A alterar, para variar com os dados inseridos no excel
+        i = 0
+        while i < (len(df['Points'])):
             
-            point1 = np.array(df.loc[i, ['r','z']].values)
-            j = i + 1 + df.loc[i, 'Nn']
-            point2 = np.array(df.loc[j, ['r','z']].values)
-            
-            v = point2 - point1 # Direction Vector 
-            u = v / np.linalg.norm(v) # Normalize the direction vector
-            distance = np.linalg.norm(v) #Distance between points
-            
-            # If both points need more elements closer to them
-            if ( df.loc[i, 'Discontinuity'] == 1 or df.loc[i, 'Conditions'] != 7 ) and ( df.loc[j, 'Discontinuity'] == 1 or df.loc[j, 'Conditions'] != 7 ):
+            if not pd.isna(df.loc[i, 'Nn']) and (df.loc[i, 'Nn'] > 0):
                 
+                point1 = np.array(df.loc[i, ['r','z']].values)
+                #print(point1)
+                j = i + 1 + df.loc[i, 'Nn']
+                point2 = np.array(df.loc[j, ['r','z']].values)
+                #print(point2)
                 
-                k = df.loc[i, 'Nn']
-                q = i
-                while k >= 1:
+                v = point2 - point1 # Direction Vector 
+                u = v / np.linalg.norm(v) # Normalize the direction vector
+                distance = np.linalg.norm(v) #Distance between points
+            
+                
+                # If both points need more elements closer to them
+                if ( df.loc[i, 'Discontinuity'] == 1 or df.loc[i, 'Conditions'] != 7 ) and ( df.loc[j, 'Discontinuity'] == 1 or df.loc[j, 'Conditions'] != 7 ):
                     
-                    add = (distance / 2) + ( math.cos( (math.pi / (df.loc[i, 'Nn'] + 1) )* k )) * (distance / 2) # distance to add from point1
-                    point3 = point1 + u*add
-                    df.loc[q+1, 'r'] = point3[0]
-                    df.loc[q+1, 'z'] = point3[1]
                     
-                    k = k - 1
-                    q = q + 1
+                    k = df.loc[i, 'Nn']
+                    q = i
+                    while k >= 1:
+                        
+                        add = (distance / 2) + ( math.cos( (math.pi / (df.loc[i, 'Nn'] + 1) )* k )) * (distance / 2) # distance to add from point1
+                        point3 = point1 + u*add
+                        df.loc[q+1, 'r'] = point3[0]
+                        df.loc[q+1, 'z'] = point3[1]
+                        
+                        k = k - 1
+                        q = q + 1
 
-            # If point 1 needs more elements closer
-            if ( df.loc[i, 'Discontinuity'] == 1 or df.loc[i, 'Conditions'] != 7 ) and ( df.loc[j, 'Discontinuity'] == 0 and df.loc[j, 'Conditions'] == 7 ):
-            
-                k = 1
-                q = i
-                while k < df.loc[i, 'Nn']:
+                # If point 1 needs more elements closer
+                if ( df.loc[i, 'Discontinuity'] == 1 or df.loc[i, 'Conditions'] != 7 ) and ( df.loc[j, 'Discontinuity'] == 0 and df.loc[j, 'Conditions'] == 7 ):
                     
-                    add = ( math.cos( (((math.pi)/2) / (df.loc[i, 'Nn'] + 1) )* k )) * distance 
-                    point3 = point2 - u*add
-                    df.loc[q+1, 'r'] = point3[0]
-                    df.loc[q+1, 'z'] = point3[1]
-                    
-                    k = k + 1
-                    q = q + 1
-            
-            # If point2 needs more elements closer
-            if ( df.loc[i, 'Discontinuity'] == 0 and df.loc[i, 'Conditions'] == 7 ) and ( df.loc[j, 'Discontinuity'] == 1 or df.loc[j, 'Conditions'] != 7 ):
-              
-                k = df.loc[i, 'Nn']
-                q = i
-                while k >= 1:
-                    
-                    add = ( math.cos( (((math.pi)/2) / (df.loc[i, 'Nn'] + 1) )* k )) * distance 
-                    point3 = point1 + u*add
-                    df.loc[q+1, 'r'] = point3[0]
-                    df.loc[q+1, 'z'] = point3[1]
-                    
-                    k = k - 1
-                    q = q + 1
-                    
-            #If neither points need more elements, we add elements with the same length
-            if ( df.loc[i, 'Discontinuity'] == 0 and df.loc[i, 'Conditions'] == 7 ) and ( df.loc[j, 'Discontinuity'] == 0 and df.loc[j, 'Conditions'] == 7 ):
+                    k = 1
+                    q = i
+                    while k <= df.loc[i, 'Nn']:
+                        
+                        add = ( math.cos( (((math.pi)/2) / (df.loc[i, 'Nn'] + 1) )* k )) * distance 
+                        point3 = point2 - u*add
+                        df.loc[q+1, 'r'] = point3[0]
+                        df.loc[q+1, 'z'] = point3[1]
+                        
+                        k = k + 1
+                        q = q + 1
                 
-                columns_interpolate     = ['z', 'r']
-                df[columns_interpolate] = df[columns_interpolate].interpolate(method='linear')
+                # If point2 needs more elements closer
+                if ( df.loc[i, 'Discontinuity'] == 0 and df.loc[i, 'Conditions'] == 7 ) and ( df.loc[j, 'Discontinuity'] == 1 or df.loc[j, 'Conditions'] != 7 ):
+                
+                    k = df.loc[i, 'Nn']
+                    q = i
+                    while k >= 1:
+                        
+                        add = ( math.cos( (((math.pi)/2) / (df.loc[i, 'Nn'] + 1) )* k )) * distance 
+                        point3 = point1 + u*add
+                        df.loc[q+1, 'r'] = point3[0]
+                        df.loc[q+1, 'z'] = point3[1]
+                        
+                        k = k - 1
+                        q = q + 1
+                        
+                #If neither points need more elements, we add elements with the same length
+                if ( df.loc[i, 'Discontinuity'] == 0 and df.loc[i, 'Conditions'] == 7 ) and ( df.loc[j, 'Discontinuity'] == 0 and df.loc[j, 'Conditions'] == 7 ):
+                    
+                    columns_interpolate     = ['z', 'r']
+                    df[columns_interpolate] = df[columns_interpolate].interpolate(method='linear')
 
-        i = i + 1
+            i = i + 1
         
-            
+           
     # Interpolation Linear Type
     columns_interpolate     = ['thi', 'Loading']
     df[columns_interpolate] = df[columns_interpolate].interpolate(method='linear')
     df.loc[len(df)-1, 'thi'] = np.nan 
+    
+    if 1==1: ################## A alterar, para variar com os dados inseridos no excel
+        # Interpolation Linear Type
+        columns_interpolate     = ['thi', 'Loading', 'z', 'r']
+        df[columns_interpolate] = df[columns_interpolate].interpolate(method='linear')
+        df.loc[len(df)-1, 'thi'] = np.nan 
 
     #print(df)
 
@@ -302,16 +320,18 @@ def Mesh_Properties():
 
     vpe = np.array(vpe.values)
 
-    """
+    
     #Graphic of the points
     df.plot(x='r', y='z', marker='o', linestyle='-', color='k', label='Nós')
     plt.gca().invert_yaxis()
     plt.legend(loc='center left')
     plt.show()
-    """
     
-    return mesh, u_DOF, vpe, material, pressure_nodes, t_col, P_col
-
+    
+    #print(material)
+    #print(vpe)
+    
+    return mesh, u_DOF, vpe, material, pressure_nodes, t_col, p_col
 
 
 

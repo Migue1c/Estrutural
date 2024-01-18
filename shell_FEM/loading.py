@@ -155,96 +155,91 @@ def loading(ne: int, pressure) -> None:  # To be verified
     return load_vct
 
 # Carregamento Dinâmico
-def func_carr_t (funcoes, A, B, w, b, t_final, pi, seg_max):
-    n = np.size(funcoes)
-    dt = 0.01
-    T = np.arange(0, seg_max, dt)
-    #print(t)
-    #print(np.size(t))
-    P = np.zeros(np.size(T))
-    P[0]=pi[0]
-    for i in range(0,n):
-        if funcoes[i] == 1:
-            A1 = A[0]      #ler do excel
-            B1 = B[0]
-            w1 = w[0]
-            b1 = b[0]
-            first_zero_index1 = np.where(P == 0)[0][0] if (P == 0).any() else None
-            t1 = t_final[0] - dt*first_zero_index1
-            t_sin = np.arange(0, t1, dt)
-            t_iter1 = np.size(t_sin)
-            last_index1 = first_zero_index1 + t_iter1
+def func_carr_t (funcoes, A, B, w, b, t_final, pi, seg_max, util, t_col, p_col):
+    if util[0] == 1:
+        n = np.size(funcoes)
+        dt = 0.01
+        T = np.arange(0, seg_max, dt)
+        #print(t)
+        #print(np.size(t))
+        P = np.zeros(np.size(T))
+        P[0]=pi[0]
+        for i in range(0,n):
+            if funcoes[i] == 1:
+                A1 = A[0]      #ler do excel
+                B1 = B[0]
+                w1 = w[0]
+                b1 = b[0]
+                first_zero_index1 = np.where(P == 0)[0][0] if (P == 0).any() else None
+                t1 = t_final[0] - dt*first_zero_index1
+                t_sin = np.arange(0, t1, dt)
+                t_iter1 = np.size(t_sin)
+                last_index1 = first_zero_index1 + t_iter1
 
-            #print(t[first_zero_index1:last_index1])
-            P_1 = np.zeros(t_iter1)
-            for i in range (0,t_iter1):
-                t_1 = t_sin[i]
-                P_1[i] = A1*np.sin(w1*t_1+b1) + P[first_zero_index1-1] - A1*np.sin(w1*t_sin[0]+b1)
-            #print(t_sin)
-            P[first_zero_index1:last_index1] = P_1
-
-
-        elif funcoes[i] == 2:
-            A2 = A[1]
-            B2 = B[1]
-            first_zero_index2 = np.where(P == 0)[0][0] if (P == 0).any() else None
-            t2 = t_final[1] - first_zero_index2*dt
-            t_exp = np.arange(0, t2, dt)
-            t_iter2 = np.size(t_exp)
-            last_index2 = first_zero_index2 + t_iter2
-            #print(t[first_zero_index2:last_index2])
-            P_2 = np.zeros(t_iter2)
-            for i in range (0, t_iter2):
-                t_2 = t_exp[i]
-                P_2[i] = A2*np.exp(B2*t_2) * P[first_zero_index2-1]
-            #print(t_2)
-            P[first_zero_index2:last_index2] = P_2
+                #print(t[first_zero_index1:last_index1])
+                P_1 = np.zeros(t_iter1)
+                for i in range (0,t_iter1):
+                    t_1 = t_sin[i]
+                    P_1[i] = A1*np.sin(w1*t_1+b1) + P[first_zero_index1-1] - A1*np.sin(w1*t_sin[0]+b1)
+                #print(t_sin)
+                P[first_zero_index1:last_index1] = P_1
 
 
-        elif funcoes[i] == 3:
-            A3 = A[2]
-            first_zero_index3 = np.where(P == 0)[0][0] if (P == 0).any() else None
-            t3 = t_final[2] - first_zero_index3 * dt
-            t_lin = np.arange(0, t3, dt)
-            t_iter3 = np.size(t_lin)
-            last_index3 = first_zero_index3 + t_iter3
-            #print(t[first_zero_index3:last_index3])
-            P_3 = np.zeros(t_iter3)
-            for i in range(0, t_iter3):
-                t_3 = t_lin[i]
-                P_3[i] = A3*t_3 + P[first_zero_index3-1]
+            elif funcoes[i] == 2:
+                A2 = A[1]
+                B2 = B[1]
+                first_zero_index2 = np.where(P == 0)[0][0] if (P == 0).any() else None
+                t2 = t_final[1] - first_zero_index2*dt
+                t_exp = np.arange(0, t2, dt)
+                t_iter2 = np.size(t_exp)
+                last_index2 = first_zero_index2 + t_iter2
+                #print(t[first_zero_index2:last_index2])
+                P_2 = np.zeros(t_iter2)
+                for i in range (0, t_iter2):
+                    t_2 = t_exp[i]
+                    P_2[i] = A2*np.exp(B2*t_2) * P[first_zero_index2-1]
+                #print(t_2)
+                P[first_zero_index2:last_index2] = P_2
 
-            P[first_zero_index3:last_index3] = P_3
 
-        elif funcoes[i] == 4:
-            first_zero_index4 = np.where(P == 0)[0][0] if (P == 0).any() else None
-            t4 = t_final[3] - first_zero_index4 * dt
-            #print(t4)
-            t_cst = np.arange(0, t4, dt)
-            t_iter4 = np.size(t_cst)
-            last_index4 = first_zero_index4 + t_iter4
-            P_4 = np.zeros(t_iter4)
-            for i in range(0, t_iter4):
-                P_4[i] = P[first_zero_index4-1]
-            #print(P_4)
-            P[first_zero_index4:last_index4] = P_4
+            elif funcoes[i] == 3:
+                A3 = A[2]
+                first_zero_index3 = np.where(P == 0)[0][0] if (P == 0).any() else None
+                t3 = t_final[2] - first_zero_index3 * dt
+                t_lin = np.arange(0, t3, dt)
+                t_iter3 = np.size(t_lin)
+                last_index3 = first_zero_index3 + t_iter3
+                #print(t[first_zero_index3:last_index3])
+                P_3 = np.zeros(t_iter3)
+                for i in range(0, t_iter3):
+                    t_3 = t_lin[i]
+                    P_3[i] = A3*t_3 + P[first_zero_index3-1]
+
+                P[first_zero_index3:last_index3] = P_3
+
+            elif funcoes[i] == 4:
+                first_zero_index4 = np.where(P == 0)[0][0] if (P == 0).any() else None
+                t4 = t_final[3] - first_zero_index4 * dt
+                #print(t4)
+                t_cst = np.arange(0, t4, dt)
+                t_iter4 = np.size(t_cst)
+                last_index4 = first_zero_index4 + t_iter4
+                P_4 = np.zeros(t_iter4)
+                for i in range(0, t_iter4):
+                    P_4[i] = P[first_zero_index4-1]
+                #print(P_4)
+                P[first_zero_index4:last_index4] = P_4
+    elif util[0] == 0:
+        T = t_col
+        P = p_col
     return P, T
 
-def Carr_t(loading, t, T, P, util, press_max_est):
-    if util[0] == 0:
-        t_col = df['t_col']
-        P_col = df['P_col']
-        P_col = P_col
-        p_col_adim = np.zeros(np.size(P_col))
-        p_col_adim = P_col/press_max_est
-        P_t_adim = np.interp(t,t_col,p_col_adim)
-    elif util[0] == 1:
-        t_col = T
-        P_col = P
-        P_col_adim = np.zeros(np.size(P))
-        P_col_adim = P/press_max_est
-        P_t_adim = np.interp(t,t_col,P_col_adim)
-    print(P_t_adim)
+def Carr_t(loading, t, T, P, press_max_est):
+
+    p_col_adim = np.zeros(np.size(P))
+    p_col_adim = P/press_max_est
+    print(np.max(p_col_adim))
+    P_t_adim = np.interp(t,T,p_col_adim)
 
     loading = loading * P_t_adim
     print(loading)
@@ -279,6 +274,7 @@ def main():
     #P_col = np.arange(0,11) # vector with the corresponding pressures
     #press_max = np.max(P_col) # max pressure value in the pressure vector
     press_est = np.array([729.35346, 27.64, 27.64, 26.995, 26.6726, 13.589206]) # pressure distribution along the geometry
+    press_max_est = np.max(press_est)
 
     #df = pd.read_excel('C:\\Users\\Nuno\\Desktop\\Mecanica Estrutural\\Trabalhos de Mecâncica Estrutural\\Livro1.xlsx',engine='openpyxl', sheet_name='Loading')
     #print(df)
@@ -309,20 +305,18 @@ def main():
     pi = df['Pi']
     funcoes = df['funções']
     util = df['utilizador']
+    t_col = df['t_col']
+    p_col = df['P_col']
     #print(util)
-
-
     seg_max = np.max(t_final)
 
-    if util[0] == 1:
-        P = func_carr_t(funcoes, A, B, w, b, t_final, pi, seg_max)[0]
-        T = func_carr_t(funcoes, A, B, w, b, t_final, pi, seg_max)[1]
+    P = func_carr_t(funcoes, A, B, w, b, t_final, pi, seg_max, util, t_col, p_col)[0]
+    T = func_carr_t(funcoes, A, B, w, b, t_final, pi, seg_max, util, t_col, p_col)[1]
 
 
     #carregamento Dinamico
 
-    press_max_est = np.max(press_est)
-    Carr_t(loading(ne,medium_pressure(pressao(acum_el,nev,nl,press_est,nn),ne)),t, T, P, util, press_max_est)
+    Carr_t(loading(ne,medium_pressure(pressao(acum_el,nev,nl,press_est,nn),ne)),t, T, P, press_max_est)
 
     #print(A, B, w, b, t_inicial, t_final)
     fig, ax = plt.subplots()

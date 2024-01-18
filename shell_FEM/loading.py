@@ -1,6 +1,7 @@
 import numpy as np
 import scipy as sp
 import matplotlib.pyplot as plt
+import pandas as pd
 
 
 def nod_and_element(points: np.ndarray, nev: np.ndarray, ne: int, acum_el: np.ndarray, thicnesses: np.ndarray,
@@ -108,74 +109,8 @@ def nod_and_element(points: np.ndarray, nev: np.ndarray, ne: int, acum_el: np.nd
     # plt.show()
 
 
-def Bi(s1: float, index: int, r: float) -> np.ndarray:
-    global vpe
-    phi = vpe[index, 1]
-    h = vpe[index, 2]
-    sen_phi = np.sin(phi)
-    cos_phi = np.cos(phi)
 
-    return np.array([[-1 / h, 0, 0],
-                     [(1 - s1) * sen_phi / r, (1 - 3 * s1 ** 2 + 2 * s1 ** 3) * cos_phi / r,
-                      h * s1 * (1 - 2 * s1 + s1 ** 2) * cos_phi / r],
-                     [0, 6 * (1 - 2 * s1) / (h ** 2), 2 * (2 - 3 * s1) / h],
-                     [0, 6 * s1 * (1 - s1) * sen_phi / (r * h), (-1 + 4 * s1 - 3 * s1 ** 2) * sen_phi / r]])
-
-
-def Bj(s1: float, index: int, r: float) -> np.ndarray:
-    global vpe
-    phi = vpe[index, 1]
-    h = vpe[index, 2]
-    sen_phi = np.sin(phi)
-    cos_phi = np.cos(phi)
-
-    return np.array([[1 / h, 0, 0],
-                     [s1 * sen_phi / r, (s1 ** 2) * (3 - 2 * s1) * cos_phi / r,
-                      h * (s1 ** 2) * (-1 + s1) * cos_phi / r],
-                     [0, -6 * (1 - 2 * s1) / (h ** 2), 2 * (1 - 3 * s1) / h],
-                     [0, -6 * s1 * (1 - s1) * sen_phi / (r * h), s1 * (2 - 3 * s1) * sen_phi / r]])
-
-
-def elastM(index: int) -> np.ndarray:
-    global vpe
-    global mat
-    E = mat[int(vpe[index, 4]), 1]  # mat must have more than one material so that the array is 2D by default
-    t = vpe[index, 3]
-    upsilon = mat[int(vpe[index, 4]), 2]
-    D = (E * t) / (1 - upsilon ** 2) * np.array(
-        [[1, upsilon, 0, 0], [upsilon, 1, 0, 0], [0, 0, (t ** 2 / 12), upsilon * (t ** 2 / 12)],
-         [0, 0, upsilon * (t ** 2 / 12), (t ** 2 / 12)]])
-    return D
-
-
-def transM(phi) -> np.ndarray:
-    T = np.array([[np.cos(phi), np.sin(phi), 0], [-np.sin(phi), np.cos(phi), 0], [0, 0, 1]])
-    return T
-
-
-def Bmatrix(s1: float, index: int, r: float, phi: float) -> np.ndarray:
-    T = transM(phi)
-    return np.hstack((Bi(s1, index, r) @ T, Bj(s1, index, r) @ T))
-
-
-def Pbar(s1: float, index: int) -> np.ndarray:
-    global vpe
-    h = vpe[index, 2]
-    return np.array([[1 - s1, 0, 0, s1, 0, 0],
-                     [0, 1 - 3 * s1 ** 2 + 2 * s1 ** 3, s1 * (1 - 2 * s1 + s1 ** 2) * h, 0, (s1 ** 2) * (3 - 2 * s1),
-                      (s1 ** 2) * (s1 - 1) * h]])
-
-
-def Pmatrix(s1: float, index: int, phi: float) -> np.ndarray:
-    T = transM(phi)
-    P = Pbar(s1, index)
-    #print(P, '\n')
-    Pi, Pj = np.hsplit(P, 2)
-    #print(Pi)
-    #print(Pj)
-    return np.hstack((Pi @ T, Pj @ T))
-
-
+#carregamento estatico
 def pressao(w,nev,nl,press_est,nn):
     pressure = np.zeros(nn)
     for i in range(0, nl):
@@ -208,95 +143,112 @@ def loading(ne: int, pressure) -> None:  # To be verified
         #print(phi, ri, hi, p)
         v_carr = np.zeros(6)
         A11 = 0.5 * ri * (-np.sin(phi)) - (3 / 20) * np.sin(phi) ** 2 * hi
-        A12 = 0.5 * ri * np.cos(phi) - (3 / 20) * np.sin(phi) * np.cos(phi) * hi
-        A13 = hi * ((1 / 3) * ri + (1 / 30) * hi * np.sin(phi))
+        A12 = 0.5 * ri * np.cos(phi) + (3 / 20) * np.sin(phi) * np.cos(phi) * hi
+        A13 = hi * ((1 / 12) * ri + (1 / 30) * hi * np.sin(phi))
         A14 = 0.5 * ri * (-np.sin(phi)) - (7 / 20) * hi * np.sin(phi) ** 2
         A15 = 0.5 * ri * np.cos(phi) + (7 / 20) * hi * np.sin(phi) * np.cos(phi)
         A16 = hi * (-(1 / 12) * ri - (1 / 20) * hi * np.sin(phi))
         v_carr = 2*np.pi*hi*p*np.array([A11, A12, A13, A14, A15, A16])
-        #print(v_carr)
-        #ef_press = np.array([0, pressure[i]])
-        #s1 = lambda s: (s + 1) / 2
-        #r = lambda s: ri + s1(s) * hi * np.sin(phi)
-        #integrand = lambda s: ef_press.dot(Pmatrix(s1(s), i, phi)) * (r(s))
-        #I = np.empty((1, 6, 200), dtype=float)
-        #for j, s in enumerate(np.linspace(-1, 1, 200)):
-           # I[:, :, j] = integrand(s)
-        #integral = 2 * np.pi * h * sp.integrate.simpson(I, x=None, dx=h / 199, axis=-1)
-        #print(integral)
-        #integral = 0.347854845 * integrand(-0.861136312) + 0.652145155 * integrand(-0.339981044) + 0.652145155 * integrand(0.339981044) + 0.347854845 * integrand(0.861136312)
+
         load_vct[3 * i:3 * i + 6] = load_vct[3 * i:3 * i + 6] + v_carr
-    #print(load for load in load_vct)
-    #print(load_vct.shape)
     print(load_vct)
     return load_vct
 
+# Carregamento Dinâmico
+def func_carr_t (funcoes, A, B, w, b, t_final, pi, seg_max):
+    n = np.size(funcoes)
+    dt = 0.01
+    T = np.arange(0, seg_max, dt)
+    #print(t)
+    #print(np.size(t))
+    P = np.zeros(np.size(T))
+    P[0]=pi[0]
+    for i in range(0,n):
+        if funcoes[i] == 1:
+            A1 = A[0]      #ler do excel
+            B1 = B[0]
+            w1 = w[0]
+            b1 = b[0]
+            first_zero_index1 = np.where(P == 0)[0][0] if (P == 0).any() else None
+            t1 = t_final[0] - dt*first_zero_index1
+            t_sin = np.arange(0, t1, dt)
+            t_iter1 = np.size(t_sin)
+            last_index1 = first_zero_index1 + t_iter1
 
-def Carr_t(loading,t,t_col,P_col,press_max):
-    p_col_adim = np.zeros(np.size(P_col))
-    p_col_adim = P_col/press_max
-    P_t = np.interp(t,t_col,p_col_adim)
-    loading=loading*P_t
-    #print(loading)
+            #print(t[first_zero_index1:last_index1])
+            P_1 = np.zeros(t_iter1)
+            for i in range (0,t_iter1):
+                t_1 = t_sin[i]
+                P_1[i] = A1*np.sin(w1*t_1+b1) + P[first_zero_index1-1] - A1*np.sin(w1*t_sin[0]+b1)
+            #print(t_sin)
+            P[first_zero_index1:last_index1] = P_1
+
+
+        elif funcoes[i] == 2:
+            A2 = A[1]
+            B2 = B[1]
+            first_zero_index2 = np.where(P == 0)[0][0] if (P == 0).any() else None
+            t2 = t_final[1] - first_zero_index2*dt
+            t_exp = np.arange(0, t2, dt)
+            t_iter2 = np.size(t_exp)
+            last_index2 = first_zero_index2 + t_iter2
+            #print(t[first_zero_index2:last_index2])
+            P_2 = np.zeros(t_iter2)
+            for i in range (0, t_iter2):
+                t_2 = t_exp[i]
+                P_2[i] = A2*np.exp(B2*t_2) * P[first_zero_index2-1]
+            #print(t_2)
+            P[first_zero_index2:last_index2] = P_2
+
+
+        elif funcoes[i] == 3:
+            A3 = A[2]
+            first_zero_index3 = np.where(P == 0)[0][0] if (P == 0).any() else None
+            t3 = t_final[2] - first_zero_index3 * dt
+            t_lin = np.arange(0, t3, dt)
+            t_iter3 = np.size(t_lin)
+            last_index3 = first_zero_index3 + t_iter3
+            #print(t[first_zero_index3:last_index3])
+            P_3 = np.zeros(t_iter3)
+            for i in range(0, t_iter3):
+                t_3 = t_lin[i]
+                P_3[i] = A3*t_3 + P[first_zero_index3-1]
+
+            P[first_zero_index3:last_index3] = P_3
+
+        elif funcoes[i] == 4:
+            first_zero_index4 = np.where(P == 0)[0][0] if (P == 0).any() else None
+            t4 = t_final[3] - first_zero_index4 * dt
+            #print(t4)
+            t_cst = np.arange(0, t4, dt)
+            t_iter4 = np.size(t_cst)
+            last_index4 = first_zero_index4 + t_iter4
+            P_4 = np.zeros(t_iter4)
+            for i in range(0, t_iter4):
+                P_4[i] = P[first_zero_index4-1]
+            #print(P_4)
+            P[first_zero_index4:last_index4] = P_4
+    return P, T
+
+def Carr_t(loading, t, T, P, util, press_max_est):
+    if util[0] == 0:
+        t_col = df['t_col']
+        P_col = df['P_col']
+        P_col = P_col
+        p_col_adim = np.zeros(np.size(P_col))
+        p_col_adim = P_col/press_max_est
+        P_t_adim = np.interp(t,t_col,p_col_adim)
+    elif util[0] == 1:
+        t_col = T
+        P_col = P
+        P_col_adim = np.zeros(np.size(P))
+        P_col_adim = P/press_max_est
+        P_t_adim = np.interp(t,t_col,P_col_adim)
+    print(P_t_adim)
+
+    loading = loading * P_t_adim
+    print(loading)
     return loading
-
-
-def Kestacked(ne: int, ni: int, simpson=False) -> np.ndarray:  # Incoeherent integration results
-    kes = np.empty((6, 6, ne), dtype=float)
-    for i in range(0, ne):
-        phi = vpe[i, 1]
-        ri = vpe[i, 0]
-        h = vpe[i, 2]
-        D = elastM(i)
-        if simpson:
-            I = np.empty((6, 6, ni + 1), dtype=float)
-            for j, s1 in enumerate(np.linspace(0, 1, ni + 1)):
-                r = ri + s1 * h * np.sin(phi)
-                B = Bmatrix(s1, i, r, phi)
-                I[:, :, j] = B.T @ D @ B * (r)
-
-            ke = 2 * np.pi * h * sp.integrate.simpson(I, x=None, dx=h / ni, axis=-1)
-            print(ke)
-        else:
-            s1_ = lambda s: (s + 1) / 2
-            r = lambda s: ri + s1_(s) * h * np.sin(phi)
-            integrand = lambda s: Bmatrix(s1_(s), i, r(s), phi).T @ D @ Bmatrix(s1_(s), i, r(s), phi) * (r(s))
-            ke = 2 * np.pi * h * ((5 / 9) * integrand(-np.sqrt(3 / 5)) + (8 / 9) * integrand(0) + (5 / 9) * integrand(
-                np.sqrt(3 / 5)))
-            print(ke)
-        kes[:, :, i] = ke
-    return kes
-
-
-def k_global(ne: int, ni=1200, sparse=False) -> None:
-    global k_globalM
-    kes = Kestacked(ne, ni)
-    if sparse:
-        row = []
-        column = []
-        data = []
-        for i in range(0, ne):
-            for j in range(0, 6):
-                for k in range(0, 6):
-                    row.append(3 * i + j)
-                    column.append(3 * i + k)
-                    data.append(kes[j, k, i])
-        # print(row)
-        # print(column)
-        # print(data)
-        k_globalM = sp.sparse.bsr_array((data, (row, column)), shape=(3 * (ne + 1), 3 * (ne + 1)))  # .toarray()
-    else:
-        k_globalM = np.zeros((3 * (ne + 1), 3 * (ne + 1)), dtype='float64')
-        for i in range(0, ne):
-            k_globalM[3 * i:3 * i + 6, 3 * i:3 * i + 6] = k_globalM[3 * i:3 * i + 6, 3 * i:3 * i + 6] + kes[:, :, i]
-    # print(f'Element {i+1}')
-    # for j in range(0, 3*(ne+1)):
-    #    for k in range(0, 3*(ne+1)):
-    #        print(f'{k_globalM[j, k]:.2}', end='   ')
-    #    print()
-    # print('\n\n')
-    # print(k_globalM)
-    # print(sparse)
 
 
 def main():
@@ -317,31 +269,73 @@ def main():
     matseg = np.array([0, 0, 0, 0, 0])
 
 
-    nev = np.array([3, 2, 2, 2, 2])  # number of elements per segment
+    nev = np.array([5, 7, 6, 3, 2])  # number of elements per segment
     ne = np.sum(nev)  # total number of elements
     nn = ne + 1 # total numer of nodes
     acum_el = np.cumsum(nev, dtype=int)  # each entry in this vect is the number of elements of the present segment + those that came before
     nl = len(nev) # total number of segments
-    t=10 # time
-    t_col = np.arange(0,11) # vector corresponding to the time interval
-    P_col = np.arange(0,11) # vector with the corresponding pressures
-    press_max = np.max(P_col) # max pressure value in the pressure vector
-    press_est = np.array([10, 8, 6, 7, 5, 1]) # pressure distribution along the geometry
+    t=13.91 # time
+    #t_col = np.arange(0,11) # vector corresponding to the time interval
+    #P_col = np.arange(0,11) # vector with the corresponding pressures
+    #press_max = np.max(P_col) # max pressure value in the pressure vector
+    press_est = np.array([729.35346, 27.64, 27.64, 26.995, 26.6726, 13.589206]) # pressure distribution along the geometry
 
-
-
+    #df = pd.read_excel('C:\\Users\\Nuno\\Desktop\\Mecanica Estrutural\\Trabalhos de Mecâncica Estrutural\\Livro1.xlsx',engine='openpyxl', sheet_name='Loading')
+    #print(df)
+    #A = df['b']
+    #print(A)
+    #print(df)
     nod_and_element(points, nev, ne, acum_el, thicnesses, matseg, interpolation)
 
     #print(vpe[0,2])
     # print(vpn)
     # print(vpe)
     #loading(ne, medium_pressure(pressao(acum_el, nev, nl, pres, nn), ne))
+
     loading(ne,medium_pressure(pressao(acum_el,nev,nl,press_est,nn),ne))
     # kelements = Kestacked(ne)
     #k_global(ne)
     # print(Pmatrix(0.4,1,np.pi/2))
     # pressure = np.ones(ne)
     # loading(ne, pressure)
+
+    df = pd.read_excel('C:\\Users\\Nuno\\Desktop\\Mecanica Estrutural\\Trabalhos de Mecâncica Estrutural\\Livro2.xlsx',
+                       engine='openpyxl')
+    A = df['A']
+    B = df['B']
+    w = df['w']
+    b = df['b']
+    t_final = df['tf']
+    pi = df['Pi']
+    funcoes = df['funções']
+    util = df['utilizador']
+    #print(util)
+
+
+    seg_max = np.max(t_final)
+
+    if util[0] == 1:
+        P = func_carr_t(funcoes, A, B, w, b, t_final, pi, seg_max)[0]
+        T = func_carr_t(funcoes, A, B, w, b, t_final, pi, seg_max)[1]
+
+
+    #carregamento Dinamico
+
+    press_max_est = np.max(press_est)
+    Carr_t(loading(ne,medium_pressure(pressao(acum_el,nev,nl,press_est,nn),ne)),t, T, P, util, press_max_est)
+
+    #print(A, B, w, b, t_inicial, t_final)
+    fig, ax = plt.subplots()
+
+    #Plot multiple lines on the same axis
+    ax.plot(T, P)
+    plt.grid(True)
+
+    # Add legend
+    ax.legend()
+
+    # Display the plot
+    plt.show()
 
 
 # Atention to units system, is it mm or m? needs to be coherent

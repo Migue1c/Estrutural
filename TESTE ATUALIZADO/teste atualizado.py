@@ -872,55 +872,58 @@ def DinamicSolver(m:np.ndarray, c:np.ndarray, k:np.ndarray, f:np.ndarray, x_0:np
 
 
 
-
+#LEITURA DO FICHEIRO
 mesh, u_DOF, vpe, material, pressure_nodes, t_col, P_col = Mesh_Properties()
 
 
-k = k_global(len(vpe), vpe, material)
-#k_df = pd.DataFrame(k)
-#k_df.to_excel('k.xlsx', index=False)
+#ANÁLISE ESTÁTICA
+#MATRIZ K
+k = k_global(len(vpe), vpe, material)                   #calculo matriz K
+k_df = pd.DataFrame(k)                                  #converter pra dataframe
+k_df.to_excel('k.xlsx', index=False)                    #guardar DF no excel
 
-medium_p = medium_pressure(pressure_nodes, len(vpe))
-carr = loading(len(vpe), vpe, medium_p)
-#print(carr)
-f_vect = np.reshape(carr,(-1,1))
-#print(f_vect)
-
-
-
-#print("vetor carregamento:\n",f_vect)
-u_global = StaticSolver(k, f_vect, u_DOF)
-#print("vetor deslocamentos:\n",u_global)
-
-
-strains, tensoes_N = calculate_strains_stresses(u_global, vpe, material)
-print("strains:\n",strains)
-print("tensões:\n",tensoes_N)
-t_VM = tensões_VM(u_global, vpe, tensoes_N)
-#print(t_VM)
-
-fsy, fsu = FS(u_global, vpe, material, t_VM, tensoes_N)
-print("fsy\n",fsy)
-print("fsu\n",fsu)
-
+#CARREGAMENTO
+medium_p = medium_pressure(pressure_nodes, len(vpe))    #calcular pressão média
+carr = loading(len(vpe), vpe, medium_p)                 #calcular vetor de carregamento (como array 1D)
+f_vect = np.reshape(carr,(-1,1))                        #converter carr para um vetor (array 2D)
+print("vetor carregamento:\n",f_vect)                   
 
 '''
+#SOLUÇÃO E POS-PROCESSAMENTO ESTÁTICA
+u_global = StaticSolver(k, f_vect, u_DOF)
+#print("vetor deslocamentos:\n",u_global)
+strains, tensoes_N = calculate_strains_stresses(u_global, vpe, material)
+t_VM = tensões_VM(u_global, vpe, tensoes_N)
+fsy, fsu = FS(u_global, vpe, material, t_VM, tensoes_N)
+print("strains:\n",strains)
+print("tensões:\n",tensoes_N)
+print("t_VM:\n",t_VM)
+print("fsy:\n",fsy)
+print("fsu:\n",fsu)
+
+
+#ANÁLISE MODAL
+#MATRIZ M
 m = m_global(len(vpe), vpe, material, ni=1200, sparse=False)
-#m_df = pd.DataFrame(m)
-#m_df.to_excel('m.xlsx', index=False)
+m_df = pd.DataFrame(m)
+m_df.to_excel('m.xlsx', index=False)
 #print(m)
 
-
+#SOLUÇÃO E POS-PROCESSAMENTO MODAL
 eig_vals, eig_vect = ModalSolver(k, m, u_DOF)
 #print("valores proprios:\n",eig_vals)
 #print("vetores proprios:\n",eig_vect)
-
 natfreq1, natfreq2 = modal(eig_vals)
 #print("valores proprios:\n",natfreq1)
 #print("vetores proprios:\n",natfreq2)
 
-
+'''
+'''
+#ANÁLISE DINÂMICA
+#MATRIZ C
 c = c_global(k, m, natfreq1, natfreq2)
+c_df = pd.DataFrame(c)
+c_df.to_excel('c.xlsx', index=False)
 #print(c)
 
 #DinamicSolver(m:np.ndarray, c:np.ndarray, k:np.ndarray, f:np.ndarray, x_0:np.ndarray, x_0_d:np.ndarray, u_DOF:np.ndarray, tk:float, delta_t:float, t_final:float, loading, t_col, P_col)

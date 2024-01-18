@@ -577,32 +577,104 @@ def loading(ne: int, vpe, pressure) -> None:  # To be verified
         A15 = 0.5 * ri * np.cos(phi) + (7 / 20) * hi * np.sin(phi) * np.cos(phi)
         A16 = hi * (-(1 / 12) * ri - (1 / 20) * hi * np.sin(phi))
         v_carr = 2*np.pi*hi*p*np.array([A11, A12, A13, A14, A15, A16])
-        #print(v_carr)
-        #ef_press = np.array([0, pressure[i]])
-        #s1 = lambda s: (s + 1) / 2
-        #r = lambda s: ri + s1(s) * hi * np.sin(phi)
-        #integrand = lambda s: ef_press.dot(Pmatrix(s1(s), i, phi)) * (r(s))
-        #I = np.empty((1, 6, 200), dtype=float)
-        #for j, s in enumerate(np.linspace(-1, 1, 200)):
-           # I[:, :, j] = integrand(s)
-        #integral = 2 * np.pi * h * sp.integrate.simpson(I, x=None, dx=h / 199, axis=-1)
-        #print(integral)
-        #integral = 0.347854845 * integrand(-0.861136312) + 0.652145155 * integrand(-0.339981044) + 0.652145155 * integrand(0.339981044) + 0.347854845 * integrand(0.861136312)
+        
         load_vct[3 * i:3 * i + 6] = load_vct[3 * i:3 * i + 6] + v_carr
-    #print(load for load in load_vct)
-    #print(load_vct.shape)
-    #print(load_vct)
+
     return load_vct
 
+def func_carr_t (funcoes, A, B, w, b, t_final, pi, seg_max):
+    n = np.size(funcoes)
+    dt = 0.01
+    T = np.arange(0, seg_max, dt)
+    #print(t)
+    #print(np.size(t))
+    P = np.zeros(np.size(T))
+    P[0]=pi[0]
+    for i in range(0,n):
+        if funcoes[i] == 1:
+            A1 = A[0]      #ler do excel
+            B1 = B[0]
+            w1 = w[0]
+            b1 = b[0]
+            first_zero_index1 = np.where(P == 0)[0][0] if (P == 0).any() else None
+            t1 = t_final[0] - dt*first_zero_index1
+            t_sin = np.arange(0, t1, dt)
+            t_iter1 = np.size(t_sin)
+            last_index1 = first_zero_index1 + t_iter1
 
-def Carr_t(loading,t,t_col,P_col):
-    P_col = P_col * (10**5)
-    press_max = np.amax(P_col)
-    p_col_adim = np.zeros(np.size(P_col))
-    p_col_adim = P_col/press_max
-    P_t = np.interp(t,t_col,p_col_adim)
-    loading=loading*P_t
-    #print(loading)
+            #print(t[first_zero_index1:last_index1])
+            P_1 = np.zeros(t_iter1)
+            for i in range (0,t_iter1):
+                t_1 = t_sin[i]
+                P_1[i] = A1*np.sin(w1*t_1+b1) + P[first_zero_index1-1] - A1*np.sin(w1*t_sin[0]+b1)
+            #print(t_sin)
+            P[first_zero_index1:last_index1] = P_1
+
+
+        elif funcoes[i] == 2:
+            A2 = A[1]
+            B2 = B[1]
+            first_zero_index2 = np.where(P == 0)[0][0] if (P == 0).any() else None
+            t2 = t_final[1] - first_zero_index2*dt
+            t_exp = np.arange(0, t2, dt)
+            t_iter2 = np.size(t_exp)
+            last_index2 = first_zero_index2 + t_iter2
+            #print(t[first_zero_index2:last_index2])
+            P_2 = np.zeros(t_iter2)
+            for i in range (0, t_iter2):
+                t_2 = t_exp[i]
+                P_2[i] = A2*np.exp(B2*t_2) * P[first_zero_index2-1]
+            #print(t_2)
+            P[first_zero_index2:last_index2] = P_2
+
+
+        elif funcoes[i] == 3:
+            A3 = A[2]
+            first_zero_index3 = np.where(P == 0)[0][0] if (P == 0).any() else None
+            t3 = t_final[2] - first_zero_index3 * dt
+            t_lin = np.arange(0, t3, dt)
+            t_iter3 = np.size(t_lin)
+            last_index3 = first_zero_index3 + t_iter3
+            #print(t[first_zero_index3:last_index3])
+            P_3 = np.zeros(t_iter3)
+            for i in range(0, t_iter3):
+                t_3 = t_lin[i]
+                P_3[i] = A3*t_3 + P[first_zero_index3-1]
+
+            P[first_zero_index3:last_index3] = P_3
+
+        elif funcoes[i] == 4:
+            first_zero_index4 = np.where(P == 0)[0][0] if (P == 0).any() else None
+            t4 = t_final[3] - first_zero_index4 * dt
+            #print(t4)
+            t_cst = np.arange(0, t4, dt)
+            t_iter4 = np.size(t_cst)
+            last_index4 = first_zero_index4 + t_iter4
+            P_4 = np.zeros(t_iter4)
+            for i in range(0, t_iter4):
+                P_4[i] = P[first_zero_index4-1]
+            #print(P_4)
+            P[first_zero_index4:last_index4] = P_4
+    return P, T
+
+def Carr_t(loading, t, T, P, util, press_max_est):
+    if util[0] == 0:
+        t_col = df['t_col']
+        P_col = df['P_col']
+        P_col = P_col
+        p_col_adim = np.zeros(np.size(P_col))
+        p_col_adim = P_col/press_max_est
+        P_t_adim = np.interp(t,t_col,p_col_adim)
+    elif util[0] == 1:
+        t_col = T
+        P_col = P
+        P_col_adim = np.zeros(np.size(P))
+        P_col_adim = P/press_max_est
+        P_t_adim = np.interp(t,t_col,P_col_adim)
+    print(P_t_adim)
+
+    loading = loading * P_t_adim
+    print(loading)
     return loading
 
 
@@ -867,9 +939,19 @@ def DinamicSolver(m:np.ndarray, c:np.ndarray, k:np.ndarray, f:np.ndarray, x_0:np
 
 
 
+'''
+seg_max = np.max(t_final)
 
-
-
+    if util[0] == 1:
+        P = func_carr_t(funcoes, A, B, w, b, t_final, pi, seg_max)[0]
+        T = func_carr_t(funcoes, A, B, w, b, t_final, pi, seg_max)[1]
+    elif util[0] == 0:
+        P = ler pelo olim
+        T = ""
+    
+#carregamento Dinamico
+press_max_est = np.max(pressure_nodes)
+'''
 
 
 #LEITURA DO FICHEIRO
@@ -878,22 +960,22 @@ mesh, u_DOF, vpe, material, pressure_nodes, t_col, P_col = Mesh_Properties()
 
 #ANÁLISE ESTÁTICA
 #MATRIZ K
-k = k_global(len(vpe), vpe, material)                   #calculo matriz K
-k_df = pd.DataFrame(k)                                  #converter pra dataframe
-k_df.to_excel('k.xlsx', index=False)                    #guardar DF no excel
+k = k_global(len(vpe), vpe, material)                       #calculo matriz K
+k_df = pd.DataFrame(k)                                      #converter pra dataframe
+k_df.to_excel('k.xlsx', index=False)                        #guardar DF no excel
 
 #CARREGAMENTO
-medium_p = medium_pressure(pressure_nodes, len(vpe))    #calcular pressão média
-carr = loading(len(vpe), vpe, medium_p)                 #calcular vetor de carregamento (como array 1D)
-f_vect = np.reshape(carr,(-1,1))                        #converter carr para um vetor (array 2D)
+medium_p = medium_pressure(pressure_nodes, len(vpe))        #calcular pressão média
+carr = loading(len(vpe), vpe, medium_p)                     #calcular vetor de carregamento (como array 1D)
+f_vect = np.reshape(carr,(-1,1))                            #converter carr para um vetor (array 2D)
 print("vetor carregamento:\n",f_vect)                   
 
 #SOLUÇÃO E POS-PROCESSAMENTO ESTÁTICA
-u_global = StaticSolver(k, f_vect, u_DOF)               #calculo dos deslocamentos
+u_global = StaticSolver(k, f_vect, u_DOF)                   #calculo dos deslocamentos
 #print("vetor deslocamentos:\n",u_global)               
-strains, tensoes_N = calculate_strains_stresses(u_global, vpe, material)        #calculo das extensões e tensões diretas (e_s, e_th, x_s, x_th)
-t_VM = tensões_VM(u_global, vpe, tensoes_N)             #calculo das tensões de von-misses ()
-fsy, fsu = FS(u_global, vpe, material, t_VM, tensoes_N) 
+strains, tensoes_N = calculate_strains_stresses(u_global, vpe, material)    #calculo das extensões e tensões diretas (e_s, e_th, x_s, x_th)
+t_VM = tensões_VM(u_global, vpe, tensoes_N)                 #calculo das tensões de von-misses (t_s_d, t_th_d, t_s_f, t_th_f)
+fsy, fsu = FS(u_global, vpe, material, t_VM, tensoes_N)     #calculo dos fatores de segurança (fsy-cedencia, fsu-rutura)
 print("strains:\n",strains)
 print("tensões:\n",tensoes_N)
 print("t_VM:\n",t_VM)
@@ -903,25 +985,25 @@ print("fsu:\n",fsu)
 
 #ANÁLISE MODAL
 #MATRIZ M
-m = m_global(len(vpe), vpe, material, ni=1200, sparse=False)
-m_df = pd.DataFrame(m)
-m_df.to_excel('m.xlsx', index=False)
+m = m_global(len(vpe), vpe, material, ni=1200, sparse=False)#calculo matriz M
+m_df = pd.DataFrame(m)                                      #converter pra dataframe
+m_df.to_excel('m.xlsx', index=False)                        #guardar DF no excel
 #print(m)
 
 #SOLUÇÃO E POS-PROCESSAMENTO MODAL
-eig_vals, eig_vect = ModalSolver(k, m, u_DOF)
-#print("valores proprios:\n",eig_vals)
-#print("vetores proprios:\n",eig_vect)
-natfreq1, natfreq2 = modal(eig_vals)
-#print("valores proprios:\n",natfreq1)
-#print("vetores proprios:\n",natfreq2)
+eig_vals, eig_vect = ModalSolver(k, m, u_DOF)               #calculo valores e vetores próprios
+natfreq1, natfreq2 = modal(eig_vals)                        #calculo das frequências naturais para amortecimento
+#print("valores proprios:\n",eig_vals)                      
+#print("vetores proprios:\n",eig_vect)                   
+#print("freq. natural 1:\n",natfreq1)
+#print("freq. natural 2:\n",natfreq2)
 
 '''
 #ANÁLISE DINÂMICA
 #MATRIZ C
-c = c_global(k, m, natfreq1, natfreq2)
-c_df = pd.DataFrame(c)
-c_df.to_excel('c.xlsx', index=False)
+c = c_global(k, m, natfreq1, natfreq2)                      #calculo matriz C
+c_df = pd.DataFrame(c)                                      #converter pra dataframe
+c_df.to_excel('c.xlsx', index=False)                        #guardar DF no excel
 #print(c)
 
 #DinamicSolver(m:np.ndarray, c:np.ndarray, k:np.ndarray, f:np.ndarray, x_0:np.ndarray, x_0_d:np.ndarray, u_DOF:np.ndarray, tk:float, delta_t:float, t_final:float, loading, t_col, P_col)

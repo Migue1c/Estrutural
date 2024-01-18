@@ -155,11 +155,12 @@ def loading(ne: int, pressure) -> None:  # To be verified
     return load_vct
 
 # Carregamento Dinâmico
-def func_carr_t (funcoes, A, B, w, b, t_final, pi, seg_max, util, t_col, p_col):
+def func_carr_t (funcoes, A, B, w, b, t_final, pi, util, t_col, p_col):
     if util[0] == 1:
         n = np.size(funcoes)
         dt = 0.01
         T = np.arange(0, seg_max, dt)
+        seg_max = np.max(t_final)
         #print(t)
         #print(np.size(t))
         P = np.zeros(np.size(T))
@@ -308,10 +309,9 @@ def main():
     t_col = df['t_col']
     p_col = df['P_col']
     #print(util)
-    seg_max = np.max(t_final)
 
-    P = func_carr_t(funcoes, A, B, w, b, t_final, pi, seg_max, util, t_col, p_col)[0]
-    T = func_carr_t(funcoes, A, B, w, b, t_final, pi, seg_max, util, t_col, p_col)[1]
+    P = func_carr_t(funcoes, A, B, w, b, t_final, pi, util, t_col, p_col)[0]
+    T = func_carr_t(funcoes, A, B, w, b, t_final, pi, util, t_col, p_col)[1]
 
 
     #carregamento Dinamico

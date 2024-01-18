@@ -72,6 +72,7 @@ def StaticSolver(k:np.ndarray, f:np.ndarray, u_DOF:np.ndarray):
 
 #Eigenvalue problem
 
+#Modal Solution:
 def ModalSolver(k:np.ndarray, m:np.ndarray, u_DOF:np.ndarray):
 
     #Reduce stiffness and mass matrices
@@ -90,16 +91,15 @@ def ModalSolver(k:np.ndarray, m:np.ndarray, u_DOF:np.ndarray):
     #filter the results
     eig_vals = np.reshape(eig_vals,(-1,1))
     
+    eig_vals = np.array(eig_vals,dtype=float)
     i=int(len(eig_vals)-1)
     while i>=0:
         if eig_vals[i,0] <= 0:
             eig_vals = np.delete(eig_vals, i, axis=0)
             eig_vect = np.delete(eig_vect, i, axis=1)
         i -= 1  
-    eig_vals = np.array(eig_vals,dtype=float)
-    print("lenght valores proprios:",len(eig_vals))
-    print("lenght vetores proprios:",np.shape(eig_vect)[1])
-
+    #print("lenght valores proprios:",len(eig_vals))
+    #print("lenght vetores proprios:",np.shape(eig_vect)[1])
     #print(eig_vals)
 
     #re-add zeros to the eigenvectors matrix

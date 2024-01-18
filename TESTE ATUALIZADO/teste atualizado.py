@@ -656,7 +656,7 @@ def func_carr_t (funcoes, A, B, w, b, t_final, pi, seg_max):
             #print(P_4)
             P[first_zero_index4:last_index4] = P_4
     return P, T
-
+'''
 def Carr_t(loading, t, T, P, util, press_max_est):
     if util[0] == 0:
         t_col = df['t_col']
@@ -676,7 +676,7 @@ def Carr_t(loading, t, T, P, util, press_max_est):
     loading = loading * P_t_adim
     print(loading)
     return loading
-
+'''
 
 
 
@@ -837,13 +837,13 @@ def ModalSolver(k:np.ndarray, m:np.ndarray, u_DOF:np.ndarray):
     #filter the results
     eig_vals = np.reshape(eig_vals,(-1,1))
     
+    eig_vals = np.array(eig_vals,dtype=float)
     i=int(len(eig_vals)-1)
     while i>=0:
         if eig_vals[i,0] <= 0:
             eig_vals = np.delete(eig_vals, i, axis=0)
             eig_vect = np.delete(eig_vect, i, axis=1)
         i -= 1  
-    eig_vals = np.array(eig_vals,dtype=float)
     #print("lenght valores proprios:",len(eig_vals))
     #print("lenght vetores proprios:",np.shape(eig_vect)[1])
     #print(eig_vals)
@@ -862,7 +862,7 @@ def DinamicSolver(m:np.ndarray, c:np.ndarray, k:np.ndarray, f:np.ndarray, x_0:np
     global matrix_ud2   
 
     #Starting value for the force vector
-    f = Carr_t(loading, tk, t_col, P_col)
+    #f = Carr_t(loading, tk, t_col, P_col)
 
     #Reduce Matrices
     k = RedMatrix(k, u_DOF)
@@ -898,7 +898,7 @@ def DinamicSolver(m:np.ndarray, c:np.ndarray, k:np.ndarray, f:np.ndarray, x_0:np
     while tk < t_final :
         
         #Force vector for current tk
-        f = Carr_t(loading, tk, t_col, P_col)
+        #f = Carr_t(loading, tk, t_col, P_col)
         f = RedMatrix(f, u_DOF)
 
         #Starting value [x_d2_(0)]

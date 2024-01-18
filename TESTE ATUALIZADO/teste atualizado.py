@@ -888,13 +888,12 @@ carr = loading(len(vpe), vpe, medium_p)                 #calcular vetor de carre
 f_vect = np.reshape(carr,(-1,1))                        #converter carr para um vetor (array 2D)
 print("vetor carregamento:\n",f_vect)                   
 
-'''
 #SOLUÇÃO E POS-PROCESSAMENTO ESTÁTICA
-u_global = StaticSolver(k, f_vect, u_DOF)
-#print("vetor deslocamentos:\n",u_global)
-strains, tensoes_N = calculate_strains_stresses(u_global, vpe, material)
-t_VM = tensões_VM(u_global, vpe, tensoes_N)
-fsy, fsu = FS(u_global, vpe, material, t_VM, tensoes_N)
+u_global = StaticSolver(k, f_vect, u_DOF)               #calculo dos deslocamentos
+#print("vetor deslocamentos:\n",u_global)               
+strains, tensoes_N = calculate_strains_stresses(u_global, vpe, material)        #calculo das extensões e tensões diretas (e_s, e_th, x_s, x_th)
+t_VM = tensões_VM(u_global, vpe, tensoes_N)             #calculo das tensões de von-misses ()
+fsy, fsu = FS(u_global, vpe, material, t_VM, tensoes_N) 
 print("strains:\n",strains)
 print("tensões:\n",tensoes_N)
 print("t_VM:\n",t_VM)
@@ -917,7 +916,6 @@ natfreq1, natfreq2 = modal(eig_vals)
 #print("valores proprios:\n",natfreq1)
 #print("vetores proprios:\n",natfreq2)
 
-'''
 '''
 #ANÁLISE DINÂMICA
 #MATRIZ C

@@ -676,16 +676,13 @@ def load_p(vpe, ne, P, pressure_nodes):
     
     
 
-
-
-
 #BOMBAS
 #MODAL
 
 def Mestacked(ne:int, vpe, mat, ni:int, simpson=True) -> np.ndarray:
     mes = np.empty((6,6,ne), dtype=float)
     for i in range(0, ne):
-        rho = mat[int(vpe[i, 4])-1, 0] # Specific mass for the material in the i-th element
+        rho = mat[0 , int(vpe[i, 4])-1,] # Specific mass for the material in the i-th element
         t = vpe[i,3]
         h = vpe[i, 2]
         phi = vpe[i, 1]
@@ -735,9 +732,9 @@ def m_global(ne:int, vpe, mat, ni=1200, sparse=False) -> np.ndarray:
         ModalSolver(k_global,m_global, u_DOF)
     output = np.array[eig_vals,eig_vect]
 
-def modal(eig_vals):
-    natfreq = (np.sqrt(eig_vals)[0:2])/(2*np.pi)
-    return natfreq[0], natfreq[1]
+#def modal(eig_vals):
+    natfreq = np.sort(np.sqrt(eig_vals))
+    return natfreq
 
 
 #ESTEVES
@@ -844,7 +841,9 @@ def ModalSolver(k:np.ndarray, m:np.ndarray, u_DOF:np.ndarray):
     #re-add zeros to the eigenvectors matrix
     eig_vect = RdfMatrix(eig_vect, u_DOF)
 
-    return eig_vals, eig_vect
+    natfreq = np.sort(np.sqrt(eig_vals))
+
+    return natfreq, eig_vect
 
 #Dinamic Solution:
 def DinamicSolver(m:np.ndarray, c:np.ndarray, k:np.ndarray, f:np.ndarray, x_0:np.ndarray, x_0_d:np.ndarray, u_DOF:np.ndarray, tk:float, delta_t:float, t_final:float, loading, t_col, P_col):
@@ -984,9 +983,8 @@ m_gl = m_global(len(vpe), vpe, material, ni=1200, sparse=False)#calculo matriz M
 #print(m)
 
 #SOLUÇÃO E POS-PROCESSAMENTO MODAL
-eig_vals, eig_vect = ModalSolver(k, m_gl, u_DOF)               #calculo valores e vetores próprios
-natfreq1, natfreq2 = modal(eig_vals)                        #calculo das frequências naturais para amortecimento
-#print("valores proprios:\n",eig_vals)                      
+natfreq, eig_vect = ModalSolver(k, m_gl, u_DOF)               #calculo valores e vetores próprios
+#print("valores proprios:\n",natfreq)                      
 #print("vetores proprios:\n",eig_vect)                   
 #print("freq. natural 1:\n",natfreq1)
 #print("freq. natural 2:\n",natfreq2)
@@ -994,7 +992,7 @@ natfreq1, natfreq2 = modal(eig_vals)                        #calculo das frequê
 
 #ANÁLISE DINÂMICA
 #MATRIZ C
-c = c_global(k, m_gl, natfreq1, natfreq2)                   #calculo matriz C
+c = c_global(k, m_gl, natfreq[0], natfreq[1])                   #calculo matriz C
 c_df = pd.DataFrame(c)                                      #converter pra dataframe
 c_df.to_excel('c.xlsx', index=False)                        #guardar DF no excel
 #print(c)

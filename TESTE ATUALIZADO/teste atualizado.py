@@ -812,7 +812,7 @@ def StaticSolver(k:np.ndarray, f:np.ndarray, u_DOF:np.ndarray):
 def ModalSolver(k:np.ndarray, m:np.ndarray, u_DOF:np.ndarray):
 
     #Reduce stiffness and mass matrices
-    k_red = RedMatrix(k, u_DOF)             #must be able to run independent analysis 
+    k_red = RedMatrix(k, u_DOF)          
     m_red = RedMatrix(m, u_DOF)
 
     #Solve the eigenvalue problem
@@ -845,7 +845,7 @@ def ModalSolver(k:np.ndarray, m:np.ndarray, u_DOF:np.ndarray):
     guide_vect = np.argsort(eig_vals)
     natfreq = np.sort(np.sqrt(eig_vals))
 
-    new_mtx = np.zeros([len(eig_vect),len(guide_vect)])
+    new_mtx = np.zeros((len(eig_vect),len(guide_vect)))
     n=0
     for i in guide_vect:
         new_mtx[:,n] = eig_vals[:,i]
@@ -946,7 +946,7 @@ seg_max = np.max(t_final)
     elif util[0] == 0:
         P = ler pelo olim
         T = ""
-    
+
 #carregamento Dinamico
 press_max_est = np.max(pressure_nodes)
 '''

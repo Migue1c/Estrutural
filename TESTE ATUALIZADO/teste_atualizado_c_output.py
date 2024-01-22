@@ -5,17 +5,13 @@ import math as m
 import scipy as sp
 import matplotlib
 import matplotlib.pyplot as plt
-import imageio
 from matplotlib.colors import Normalize
 import matplotlib.colors as mcolors
 from mpl_toolkits.mplot3d import Axes3D
 import os
-import concurrent.futures
 import warnings
 import time
-import io
 
-from tqdm import tqdm
 
 # Ignorar o aviso específico
 warnings.filterwarnings("ignore", message="The behavior of DataFrame concatenation with empty or all-NA entries is deprecated.*")
@@ -354,7 +350,7 @@ def Mesh_Properties():
     return mesh, u_DOF, vpe, material, pressure_nodes, t_col, p_col
 
 """
- #Graphic of the points
+#Graphic of the points
 df.plot(x='r', y='z', marker='o', linestyle='-', color='k', label='Nós')
 plt.gca().invert_yaxis()
 plt.legend(loc='center left')
@@ -851,47 +847,71 @@ def DinamicSolver(m:np.ndarray, c:np.ndarray, k:np.ndarray, f:np.ndarray, x_0:np
     matrix_ud = RdfMatrix(matrix_ud, u_DOF)
     matrix_ud2 = RdfMatrix(matrix_ud2, u_DOF)
 
+
+#############################################################################################################################################
+#############################################################################################################################################
+#############################################################################################################################################
+
+
+#LEITURA DO FICHEIRO
 mesh, u_DOF, vpe, material, pressure_nodes, t_col, P_col = Mesh_Properties()
 
-k = k_global(len(vpe), vpe, material)
-#k_df = pd.DataFrame(k)
-#k_df.to_excel('k.xlsx', index=False)
+#ANÁLISE ESTÁTICAs
+#MATRIZ K
+k = k_global(len(vpe), vpe, material)                       #calculo matriz K
+#k_df = pd.DataFrame(k)                                      #converter pra dataframe
+#k_df.to_excel('k.xlsx', index=False)                        #guardar DF no excel
 
-medium_p = medium_pressure(pressure_nodes, len(vpe))
-carr = loading(len(vpe), vpe, medium_p)
-#print(carr)
-f_vect = np.reshape(carr,(-1,1))
+#CARREGAMENTO
+medium_p = medium_pressure(pressure_nodes, len(vpe))        #calcular pressão média
+carr = loading(len(vpe), vpe, medium_p)                     #calcular vetor de carregamento (como array 1D)
+f_vect = np.reshape(carr,(-1,1))                            #converter carr para um vetor (array 2D)
+#print("vetor carregamento:\n",f_vect)                   
 
-u_global = StaticSolver(k, f_vect, u_DOF)
-#print("vetor deslocamentos:\n",u_global)
-
-strains, tensoes_N = calculate_strains_stresses(u_global, vpe, material)
+#SOLUÇÃO E POS-PROCESSAMENTO ESTÁTICA
+u_global = StaticSolver(k, f_vect, u_DOF)                   #calculo dos deslocamentos
+#print("vetor deslocamentos:\n",u_global)               
+strains, tensoes_N = calculate_strains_stresses(u_global, vpe, material)    #calculo das extensões e tensões diretas (e_s, e_th, x_s, x_th)
+t_VM = tensões_VM(u_global, vpe, tensoes_N)                 #calculo das tensões de von-misses (t_s_d, t_th_d, t_s_f, t_th_f)
+fsy, fsu = FS(u_global, vpe, material, t_VM, tensoes_N)     #calculo dos fatores de segurança (fsy-cedencia, fsu-rutura)
 #print("strains:\n",strains)
 #print("tensões:\n",tensoes_N)
-t_VM = tensões_VM(u_global, vpe, tensoes_N)
-#print(t_VM)
+#print("t_VM:\n",t_VM)
+#print("fsy:\n",fsy)
+#print("fsu:\n",fsu)
 
-fsy, fsu = FS(u_global, vpe, material, t_VM, tensoes_N)
-#print("fsy\n",fsy)
-#print("fsu\n",fsu)
-
-m = m_global(len(vpe), vpe, material, ni=1200, sparse=False)
-#m_df = pd.DataFrame(m)
-#m_df.to_excel('m.xlsx', index=False)
+#ANÁLISE MODAL
+#MATRIZ M
+m = m_global(len(vpe), vpe, material, ni=1200, sparse=False)#calculo matriz M
+#m_df = pd.DataFrame(m)                                      #converter pra dataframe
+#m_df.to_excel('m.xlsx', index=False)                        #guardar DF no excel
 #print(m)
 
-eig_vals, eig_vect = ModalSolver(k, m, u_DOF)
-#print("valores proprios:\n",eig_vals)
-#print("vetores proprios:\n",eig_vect)
+#SOLUÇÃO E POS-PROCESSAMENTO MODAL
+eig_vals, eig_vect = ModalSolver(k, m, u_DOF)               #calculo valores e vetores próprios
+natfreq1, natfreq2 = modal(eig_vals)                        #calculo das frequências naturais para amortecimento
+#print("valores proprios:\n",eig_vals)                      
+#print("vetores proprios:\n",eig_vect)                   
+#print("freq. natural 1:\n",natfreq1)
+#print("freq. natural 2:\n",natfreq2)
 
-natfreq1, natfreq2 = modal(eig_vals)
-#print("valores proprios:\n",natfreq1)
-#print("vetores proprios:\n",natfreq2)
 
-c = c_global(k, m, natfreq1, natfreq2)
+#ANÁLISE DINÂMICA
+#MATRIZ C
+c = c_global(k, m, natfreq1, natfreq2)                      #calculo matriz C
+c_df = pd.DataFrame(c)                                      #converter pra dataframe
+c_df.to_excel('c.xlsx', index=False)                        #guardar DF no excel
 #print(c)
 
 #DinamicSolver(m:np.ndarray, c:np.ndarray, k:np.ndarray, f:np.ndarray, x_0:np.ndarray, x_0_d:np.ndarray, u_DOF:np.ndarray, tk:float, delta_t:float, t_final:float, loading, t_col, P_col)
+
+
+
+
+
+
+
+
 
 tf_analise = time.time()
 

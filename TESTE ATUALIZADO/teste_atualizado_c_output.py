@@ -13,6 +13,7 @@ import warnings
 import time
 
 
+
 # Ignorar o aviso específico
 warnings.filterwarnings("ignore", message="The behavior of DataFrame concatenation with empty or all-NA entries is deprecated.*")
 warnings.filterwarnings("ignore", message="Conversion of an array with ndim > 0 to a scalar is deprecated.*")
@@ -492,20 +493,29 @@ def calculate_strains_stresses(displacements, vpe, mat):
 
     #tensoes_N vai ser uma matriz em que cada coluna corresponde a [sigma_sd, sigma_td, sigma_sf, sigma_tf], em que d(dentro) e f(fora) 
     tensoes_N = np.zeros((num_nodes, 4))
+    tensoes_memb = np.zeros((num_nodes, 2))
     for i in range(num_elements):
         t = vpe[i, 3]
-        sigma_sd = forças_N[i,0]/t -  6*forças_N[i,2]/t**2
-        sigma_sf = forças_N[i,0]/t +  6*forças_N[i,2]/t**2
-        sigma_td = forças_N[i,1]/t -  6*forças_N[i,3]/t**2
-        sigma_tf = forças_N[i,1]/t +  6*forças_N[i,3]/t**2
+        sigma_s = forças_N[i,0]/t
+        sigma_t = forças_N[i,1]/t
+        tensoes_memb[i, :] = [sigma_s, sigma_t]
+
+        sigma_sd = sigma_s -  6*forças_N[i,2]/t**2
+        sigma_sf = sigma_s +  6*forças_N[i,2]/t**2
+        sigma_td = sigma_t -  6*forças_N[i,3]/t**2
+        sigma_tf = sigma_t +  6*forças_N[i,3]/t**2
         tensoes_N[i, :] = [sigma_sd, sigma_td, sigma_sf, sigma_tf]
     i += 1
-    sigma_sd = forças_N[i,0]/t - 6*forças_N[i,2]/t**2
-    sigma_sf = forças_N[i,0]/t + 6*forças_N[i,2]/t**2
-    sigma_td = forças_N[i,1]/t - 6*forças_N[i,3]/t**2
-    sigma_tf = forças_N[i,1]/t +     6*forças_N[i,3]/t**2
+    sigma_s = forças_N[i,0]/t
+    sigma_t = forças_N[i,1]/t
+    tensoes_memb[i, :] = [sigma_s, sigma_t]
+
+    sigma_sd = sigma_s - 6*forças_N[i,2]/t**2
+    sigma_sf = sigma_s + 6*forças_N[i,2]/t**2
+    sigma_td = sigma_t - 6*forças_N[i,3]/t**2
+    sigma_tf = sigma_t + 6*forças_N[i,3]/t**2
     tensoes_N[i, :] = [sigma_sd, sigma_td, sigma_sf, sigma_tf]
-    return strains, tensoes_N
+    return strains, tensoes_N, tensoes_memb
 
 def tensões_VM(displacements, vpe, tensoes_N):      #matriz de duas colunas em que a primeira corresponde a dentro da casca e a segunda a fora da casca
     num_nodes = int(len(displacements)/3)
@@ -871,7 +881,7 @@ f_vect = np.reshape(carr,(-1,1))                            #converter carr para
 #SOLUÇÃO E POS-PROCESSAMENTO ESTÁTICA
 u_global = StaticSolver(k, f_vect, u_DOF)                   #calculo dos deslocamentos
 #print("vetor deslocamentos:\n",u_global)               
-strains, tensoes_N = calculate_strains_stresses(u_global, vpe, material)    #calculo das extensões e tensões diretas (e_s, e_th, x_s, x_th)
+strains, tensoes_N, tensoes_memb = calculate_strains_stresses(u_global, vpe, material)    #calculo das extensões e tensões diretas (e_s, e_th, x_s, x_th)
 t_VM = tensões_VM(u_global, vpe, tensoes_N)                 #calculo das tensões de von-misses (t_s_d, t_th_d, t_s_f, t_th_f)
 fsy, fsu = FS(u_global, vpe, material, t_VM, tensoes_N)     #calculo dos fatores de segurança (fsy-cedencia, fsu-rutura)
 #print("strains:\n",strains)
@@ -898,20 +908,12 @@ natfreq1, natfreq2 = modal(eig_vals)                        #calculo das frequê
 
 #ANÁLISE DINÂMICA
 #MATRIZ C
-c = c_global(k, m_gl, natfreq1, natfreq2)                   #calculo matriz C
+c = c_global(k, m_gl, natfreq1, natfreq2)                      #calculo matriz C
 c_df = pd.DataFrame(c)                                      #converter pra dataframe
 c_df.to_excel('c.xlsx', index=False)                        #guardar DF no excel
 #print(c)
 
 #DinamicSolver(m:np.ndarray, c:np.ndarray, k:np.ndarray, f:np.ndarray, x_0:np.ndarray, x_0_d:np.ndarray, u_DOF:np.ndarray, tk:float, delta_t:float, t_final:float, loading, t_col, P_col)
-
-
-
-
-
-
-
-
 
 tf_analise = time.time()
 
@@ -1419,13 +1421,10 @@ geometry_plot(mesh,rev_degrees,main_folder,geometry_photo, show)
 #Tecplot data exporter for 3D
 tecplot_exporter('output_export_tecplot_3d.txt', rev_points, mesh, u_global, strains, tensoes_N, t_VM, fsy, fsu)
 
-
-
 #Graphs
 
 #Stress - Graphs
 graphs (mesh, rev_degrees, stress_matrix_sd, stress_sd_photo, stress_folder, stress_sd_graph,show,static_folder)
-
 graphs (mesh, rev_degrees, stress_matrix_td, stress_td_photo, stress_folder, stress_td_graph,show,static_folder)
 graphs (mesh, rev_degrees, stress_matrix_sf, stress_sf_photo, stress_folder, stress_sf_graph,show,static_folder)
 graphs (mesh, rev_degrees, stress_matrix_tf, stress_tf_photo, stress_folder, stress_tf_graph,show,static_folder)
@@ -1447,32 +1446,6 @@ graphs (mesh, rev_degrees, stress_matrix_chi_theta, strain_chi_theta_photo, stra
 graphs (mesh, rev_degrees, safety_matrix_fsy, safety_fsy_photo, safety_folder,safety_fsy_graph,show,static_folder)
 graphs (mesh, rev_degrees,safety_matrix_fsu,safety_fsu_photo,safety_folder,safety_fsu_graph,show,static_folder)
 
-'''
-
-# Stress - Graphs
-graphs(mesh, points_matrix, stress_matrix_sd, stress_sd_photo, stress_folder, stress_sd_graph, show, static_folder, loaded_image)
-graphs(mesh, points_matrix, stress_matrix_td, stress_td_photo, stress_folder, stress_td_graph, show, static_folder, loaded_image)
-graphs(mesh, points_matrix, stress_matrix_sf, stress_sf_photo, stress_folder, stress_sf_graph, show, static_folder, loaded_image)
-graphs(mesh, points_matrix, stress_matrix_tf, stress_tf_photo, stress_folder, stress_tf_graph, show, static_folder, loaded_image)
-graphs(mesh, points_matrix, stress_matrix_vm_inside, stress_vm_inside_photo, stress_folder, stress_vm_inside_graph, show, static_folder, loaded_image)
-graphs(mesh, points_matrix, stress_matrix_vm_outside, stress_vm_outside_photo, stress_folder, stress_vm_outside_graph, show, static_folder, loaded_image)
-
-# Displacements - Graphs
-graphs(mesh, points_matrix, displacement_matrix_v, displacement_v_photo, displacement_folder, displacement_v_graph, show, static_folder, loaded_image)
-graphs(mesh, points_matrix, displacement_matrix_w, displacement_w_photo, displacement_folder, displacement_w_graph, show, static_folder, loaded_image)
-graphs(mesh, points_matrix, displacement_matrix_theta, displacement_theta_photo, displacement_folder, displacement_theta_graph, show, static_folder, loaded_image)
-
-# Strain - Graphs
-graphs(mesh, points_matrix, stress_matrix_epsilon_s, strain_epsilon_s_photo, strain_folder, strain_epsilon_s_graph, show, static_folder, loaded_image)
-graphs(mesh, points_matrix, stress_matrix_epsilon_theta, strain_epsilon_theta_photo, strain_folder, strain_epsilon_theta_graph, show, static_folder, loaded_image)
-graphs(mesh, points_matrix, stress_matrix_chi_s, strain_chi_s_photo, strain_folder, strain_chi_s_graph, show, static_folder, loaded_image)
-graphs(mesh, points_matrix, stress_matrix_chi_theta, strain_chi_theta_photo, strain_folder, strain_chi_theta_graph, show, static_folder, loaded_image)
-
-# Safety Factor - Graphs
-graphs(mesh, points_matrix, safety_matrix_fsy, safety_fsy_photo, safety_folder, safety_fsy_graph, show, static_folder, loaded_image)
-graphs(mesh, points_matrix, safety_matrix_fsu, safety_fsu_photo, safety_folder, safety_fsu_graph, show, static_folder, loaded_image)
-
-'''
 
 #Files 
 

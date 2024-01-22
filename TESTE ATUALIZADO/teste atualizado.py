@@ -449,7 +449,6 @@ def calculate_strains_stresses(displacements, vpe, mat):
     num_nodes = int(len(displacements)/3)
     num_elements = len(vpe)
 
-
     strains = np.zeros((num_nodes, 4))  # Matriz para armazenar as deformações de cada nó (epsilon_s, epsilon_theta, chi_s, chi_theta)
     for i in range(num_elements):
         R = vpe[i,0]
@@ -470,20 +469,29 @@ def calculate_strains_stresses(displacements, vpe, mat):
 
     #tensoes_N vai ser uma matriz em que cada coluna corresponde a [sigma_sd, sigma_td, sigma_sf, sigma_tf], em que d(dentro) e f(fora) 
     tensoes_N = np.zeros((num_nodes, 4))
+    tensoes_memb = np.zeros((num_nodes, 2))
     for i in range(num_elements):
         t = vpe[i, 3]
-        sigma_sd = forças_N[i,0]/t -  6*forças_N[i,2]/t**2
-        sigma_sf = forças_N[i,0]/t +  6*forças_N[i,2]/t**2
-        sigma_td = forças_N[i,1]/t -  6*forças_N[i,3]/t**2
-        sigma_tf = forças_N[i,1]/t +  6*forças_N[i,3]/t**2
+        sigma_s = forças_N[i,0]/t
+        sigma_t = forças_N[i,1]/t
+        tensoes_memb[i, :] = [sigma_s, sigma_t]
+
+        sigma_sd = sigma_s -  6*forças_N[i,2]/t**2
+        sigma_sf = sigma_s +  6*forças_N[i,2]/t**2
+        sigma_td = sigma_t -  6*forças_N[i,3]/t**2
+        sigma_tf = sigma_t +  6*forças_N[i,3]/t**2
         tensoes_N[i, :] = [sigma_sd, sigma_td, sigma_sf, sigma_tf]
     i += 1
-    sigma_sd = forças_N[i,0]/t - 6*forças_N[i,2]/t**2
-    sigma_sf = forças_N[i,0]/t + 6*forças_N[i,2]/t**2
-    sigma_td = forças_N[i,1]/t - 6*forças_N[i,3]/t**2
-    sigma_tf = forças_N[i,1]/t +     6*forças_N[i,3]/t**2
+    sigma_s = forças_N[i,0]/t
+    sigma_t = forças_N[i,1]/t
+    tensoes_memb[i, :] = [sigma_s, sigma_t]
+
+    sigma_sd = sigma_s - 6*forças_N[i,2]/t**2
+    sigma_sf = sigma_s + 6*forças_N[i,2]/t**2
+    sigma_td = sigma_t - 6*forças_N[i,3]/t**2
+    sigma_tf = sigma_t + 6*forças_N[i,3]/t**2
     tensoes_N[i, :] = [sigma_sd, sigma_td, sigma_sf, sigma_tf]
-    return strains, tensoes_N
+    return strains, tensoes_N, tensoes_memb
 
 def tensões_VM(displacements, vpe, tensoes_N):      #matriz de duas colunas em que a primeira corresponde a dentro da casca e a segunda a fora da casca
     num_nodes = int(len(displacements)/3)
@@ -958,11 +966,12 @@ f_vect = np.reshape(carr,(-1,1))                            #converter carr para
 #SOLUÇÃO E POS-PROCESSAMENTO ESTÁTICA
 u_global = StaticSolver(k, f_vect, u_DOF)                   #calculo dos deslocamentos
 #print("vetor deslocamentos:\n",u_global)               
-strains, tensoes_N = calculate_strains_stresses(u_global, vpe, material)    #calculo das extensões e tensões diretas (e_s, e_th, x_s, x_th)
+strains, tensoes_N, tensoes_memb = calculate_strains_stresses(u_global, vpe, material)    #calculo das extensões e tensões diretas (e_s, e_th, x_s, x_th)
 t_VM = tensões_VM(u_global, vpe, tensoes_N)                 #calculo das tensões de von-misses (t_s_d, t_th_d, t_s_f, t_th_f)
 fsy, fsu = FS(u_global, vpe, material, t_VM, tensoes_N)     #calculo dos fatores de segurança (fsy-cedencia, fsu-rutura)
 #print("strains:\n",strains)
 #print("tensões:\n",tensoes_N)
+#print("tensões membrana:\n",tensoes_memb)
 #print("t_VM:\n",t_VM)
 #print("fsy:\n",fsy)
 #print("fsu:\n",fsu)

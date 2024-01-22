@@ -7,30 +7,30 @@ import scipy as sp
 def Mesh_Properties():
 
     # Number of Points to read
-    df_num_rows  = pd.read_excel('Exemplo_Prof.xlsx', sheet_name = 'Input', usecols = ['NumRowsRead'], nrows = 1)
+    df_num_rows  = pd.read_excel('Livro1.xlsx', sheet_name = 'Input', usecols = ['NumRowsRead'], nrows = 1)
     k            = int(df_num_rows.loc[0, 'NumRowsRead'])
 
     #Materials to read
-    df_matcols  = pd.read_excel('Exemplo_Prof.xlsx', sheet_name = 'Materials', usecols = [0], nrows = 1)
+    df_matcols  = pd.read_excel('Livro1.xlsx', sheet_name = 'Materials', usecols = [0], nrows = 1)
     m           = int(df_matcols.iloc[0, 0])
     matcols     = list(range(3, 3 + m))
     
     # Number of lines to read, for the loading
-    df_loading_read = pd.read_excel('Exemplo_Prof.xlsx', sheet_name = 'Loading', usecols = ['NumRowsRead'], nrows = 1)
+    df_loading_read = pd.read_excel('Livro1.xlsx', sheet_name = 'Loading', usecols = ['NumRowsRead'], nrows = 1)
     k2              = int(df_loading_read.loc[0, 'NumRowsRead'])
 
     # Reading the Input Data / Creating DataFrames
     df_read     = ['Points','z','r','thi','Conditions','Material','Conditions1','Nn', 'Loading', 'Discontinuity'] 
-    df          = pd.read_excel('Exemplo_Prof.xlsx', sheet_name = 'Input', usecols = df_read, nrows = k) 
+    df          = pd.read_excel('Livro1.xlsx', sheet_name = 'Input', usecols = df_read, nrows = k) 
                                                                                     
-    df_info     = pd.read_excel('Exemplo_Prof.xlsx', sheet_name = 'Input', usecols = ['Discontinuity'], nrows = k)
+    df_info     = pd.read_excel('Livro1.xlsx', sheet_name = 'Input', usecols = ['Discontinuity'], nrows = k)
 
-    df_mat      = pd.read_excel('Exemplo_Prof.xlsx', sheet_name = 'Materials', usecols = matcols, nrows = 7)
+    df_mat      = pd.read_excel('Livro1.xlsx', sheet_name = 'Materials', usecols = matcols, nrows = 7)
     
     #print(df_mat)
     
     df_loading  = ['t', 'p1']
-    df_loading  = pd.read_excel('Exemplo_Prof.xlsx', sheet_name = 'Loading', usecols = df_loading, nrows = k2)
+    df_loading  = pd.read_excel('Livro1.xlsx', sheet_name = 'Loading', usecols = df_loading, nrows = k2)
     
     #print(df_loading)
     
@@ -135,7 +135,7 @@ def Mesh_Properties():
         #Normalizar o vetor        
         #Calcular o ponto e adicionar ao DataFrame
         
-    if 1==0: ################## A alterar, para variar com os dados inseridos no excel
+    if 1==1: ################## A alterar, para variar com os dados inseridos no excel
         i = 0
         while i < (len(df['Points'])):
             
@@ -212,7 +212,7 @@ def Mesh_Properties():
     df[columns_interpolate] = df[columns_interpolate].interpolate(method='linear')
     df.loc[len(df)-1, 'thi'] = np.nan 
     
-    if 1==1: ################## A alterar, para variar com os dados inseridos no excel
+    if 1==0: ################## A alterar, para variar com os dados inseridos no excel
         # Interpolation Linear Type
         columns_interpolate     = ['thi', 'Loading', 'z', 'r']
         df[columns_interpolate] = df[columns_interpolate].interpolate(method='linear')
@@ -320,18 +320,19 @@ def Mesh_Properties():
 
     vpe = np.array(vpe.values)
 
-    '''
+    
     #Graphic of the points
     df.plot(x='r', y='z', marker='o', linestyle='-', color='k', label='Nós')
     plt.gca().invert_yaxis()
     plt.legend(loc='center left')
     plt.show()
-    '''
+    
     
     #print(material)
     #print(vpe)
     
     return mesh, u_DOF, vpe, material, pressure_nodes, t_col, p_col
+
 
 
 #PARTE ALFAGEM

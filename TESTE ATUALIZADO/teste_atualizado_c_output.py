@@ -898,7 +898,7 @@ natfreq1, natfreq2 = modal(eig_vals)                        #calculo das frequê
 
 #ANÁLISE DINÂMICA
 #MATRIZ C
-c = c_global(k, m_gl, natfreq1, natfreq2)                      #calculo matriz C
+c = c_global(k, m_gl, natfreq1, natfreq2)                   #calculo matriz C
 c_df = pd.DataFrame(c)                                      #converter pra dataframe
 c_df.to_excel('c.xlsx', index=False)                        #guardar DF no excel
 #print(c)

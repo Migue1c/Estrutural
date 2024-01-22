@@ -334,20 +334,8 @@ def Mesh_Properties():
     return mesh, u_DOF, vpe, material, pressure_nodes, t_col, p_col
 
 
-
-"""
- #Graphic of the points
-df.plot(x='r', y='z', marker='o', linestyle='-', color='k', label='Nós')
-plt.gca().invert_yaxis()
-plt.legend(loc='center left')
-plt.show()
-"""
-
-
-
 #PARTE ALFAGEM
 #ESTÁTICA
-
 def Bi(s1:float, index:int, r:float, vpe) -> np.ndarray:
     phi = vpe[index, 1]
     h = vpe[index, 2]
@@ -456,7 +444,7 @@ def k_global(ne:int, vpe, mat, ni=1200, sparse=False) -> np.ndarray:
 
     #print(sparse)
  
-
+#POS-PROCESSAMENTO
 def calculate_strains_stresses(displacements, vpe, mat):
     num_nodes = int(len(displacements)/3)
     num_elements = len(vpe)
@@ -547,9 +535,7 @@ def FS(displacements, vpe, mat, VM, tensões_N):     #FSy - deformação plastic
 
 
 
-
-
-
+#QUITÉRIO
 #CARREGAMENTO
 
 def medium_pressure(pressao, ne):
@@ -685,7 +671,7 @@ def load_p(vpe, ne, P, pressure_nodes):
 
 
 
-
+#BOMBAS
 #MODAL
 
 def Mestacked(ne:int, vpe, mat, ni:int, simpson=True) -> np.ndarray:
@@ -746,7 +732,7 @@ def modal(eig_vals):
     return natfreq[0], natfreq[1]
 
 
-
+#ESTEVES
 #DINÂMICA
 
 def c_global(k_globalM, m_globalM, mode1:float, mode2:float, zeta1=0.08, zeta2=0.08):
@@ -765,7 +751,6 @@ def c_global(k_globalM, m_globalM, mode1:float, mode2:float, zeta1=0.08, zeta2=0
 
 
 #SOLUÇÃO
-
 
 #Function to reduce matrices
 def RedMatrix(m:np.ndarray, u_DOF:np.ndarray):
@@ -935,10 +920,6 @@ def DinamicSolver(m:np.ndarray, c:np.ndarray, k:np.ndarray, f:np.ndarray, x_0:np
 
 
 
-
-
-
-
 '''
 seg_max = np.max(t_final)
 
@@ -968,7 +949,7 @@ k_df.to_excel('k.xlsx', index=False)                        #guardar DF no excel
 medium_p = medium_pressure(pressure_nodes, len(vpe))        #calcular pressão média
 carr = loading(len(vpe), vpe, medium_p)                     #calcular vetor de carregamento (como array 1D)
 f_vect = np.reshape(carr,(-1,1))                            #converter carr para um vetor (array 2D)
-print("vetor carregamento:\n",f_vect)                   
+#print("vetor carregamento:\n",f_vect)                   
 
 #SOLUÇÃO E POS-PROCESSAMENTO ESTÁTICA
 u_global = StaticSolver(k, f_vect, u_DOF)                   #calculo dos deslocamentos
@@ -981,7 +962,6 @@ print("tensões:\n",tensoes_N)
 print("t_VM:\n",t_VM)
 print("fsy:\n",fsy)
 print("fsu:\n",fsu)
-
 
 #ANÁLISE MODAL
 #MATRIZ M

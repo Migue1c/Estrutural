@@ -882,13 +882,13 @@ fsy, fsu = FS(u_global, vpe, material, t_VM, tensoes_N)     #calculo dos fatores
 
 #ANÁLISE MODAL
 #MATRIZ M
-m = m_global(len(vpe), vpe, material, ni=1200, sparse=False)#calculo matriz M
+m_gl = m_global(len(vpe), vpe, material, ni=1200, sparse=False)#calculo matriz M
 #m_df = pd.DataFrame(m)                                      #converter pra dataframe
 #m_df.to_excel('m.xlsx', index=False)                        #guardar DF no excel
 #print(m)
 
 #SOLUÇÃO E POS-PROCESSAMENTO MODAL
-eig_vals, eig_vect = ModalSolver(k, m, u_DOF)               #calculo valores e vetores próprios
+eig_vals, eig_vect = ModalSolver(k, m_gl, u_DOF)               #calculo valores e vetores próprios
 natfreq1, natfreq2 = modal(eig_vals)                        #calculo das frequências naturais para amortecimento
 #print("valores proprios:\n",eig_vals)                      
 #print("vetores proprios:\n",eig_vect)                   
@@ -898,7 +898,7 @@ natfreq1, natfreq2 = modal(eig_vals)                        #calculo das frequê
 
 #ANÁLISE DINÂMICA
 #MATRIZ C
-c = c_global(k, m, natfreq1, natfreq2)                      #calculo matriz C
+c = c_global(k, m_gl, natfreq1, natfreq2)                      #calculo matriz C
 c_df = pd.DataFrame(c)                                      #converter pra dataframe
 c_df.to_excel('c.xlsx', index=False)                        #guardar DF no excel
 #print(c)

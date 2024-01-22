@@ -841,7 +841,17 @@ def ModalSolver(k:np.ndarray, m:np.ndarray, u_DOF:np.ndarray):
     #re-add zeros to the eigenvectors matrix
     eig_vect = RdfMatrix(eig_vect, u_DOF)
 
+    
+    guide_vect = np.argsort(eig_vals)
     natfreq = np.sort(np.sqrt(eig_vals))
+
+    new_mtx = np.zeros([len(eig_vect),len(guide_vect)])
+    n=0
+    for i in guide_vect:
+        new_mtx[:,n] = eig_vals[:,i]
+        n += 1
+    
+    eig_vect = new_mtx
 
     return natfreq, eig_vect
 

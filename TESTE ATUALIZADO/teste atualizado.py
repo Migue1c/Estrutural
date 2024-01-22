@@ -674,7 +674,13 @@ def Carr_t(loading, t, T, P, press_max_est):
     return loading
 
 
+def load_p(vpe, ne, P, pressure_nodes):
+    max = np.amax(pressure_nodes)
+    for i in range (0,ne):
+        pressure_nodes = pressure_nodes / max * P
 
+    
+    
 
 
 

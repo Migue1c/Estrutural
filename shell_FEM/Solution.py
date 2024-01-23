@@ -180,7 +180,7 @@ def ModalSolver(k:np.ndarray, m:np.ndarray, u_DOF:np.ndarray):
 
 
 #STATIC TEST VERSION
-def DinamicSolver(m:np.ndarray, c:np.ndarray, k:np.ndarray, u_DOF:np.ndarray, t_col, P_col, cenas_da_função_do_quiterio):
+def DinamicSolver(k:np.ndarray, m:np.ndarray, c:np.ndarray, u_DOF:np.ndarray, t_col, p_col, vpe, ne, pressure_nodes):
 
     #static test only
     #Reduce Matrices
@@ -219,7 +219,7 @@ def DinamicSolver(m:np.ndarray, c:np.ndarray, k:np.ndarray, u_DOF:np.ndarray, t_
     while tk <= t_final :
         
         #Force vector for current tk
-        f = funçao_carr_ou_o_crlh(inputs necessários, P_col[fg,0])
+        f = load_p(vpe, ne, p_col[fg,0], pressure_nodes)
         f = RedMatrix(f, u_DOF)
 
         #Starting value [x_d2_(0)]

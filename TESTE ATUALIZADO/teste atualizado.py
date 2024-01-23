@@ -930,17 +930,17 @@ def ModalSolver(k:np.ndarray, m:np.ndarray, u_DOF:np.ndarray):
     return natfreq, eig_vect
 
 #Dinamic Solution:
-#loading, t_col, P_col
-#inputs need change
-def DinamicSolver(m:np.ndarray, c:np.ndarray, k:np.ndarray, f:np.ndarray, u_DOF:np.ndarray, tk:float, delta_t:float, t_final:float):
+#STATIC TEST VERSION ONLY
+def DinamicSolver(k:np.ndarray, m:np.ndarray, c:np.ndarray, u_DOF:np.ndarray, t_col, p_col, vpe, ne, pressure_nodes):
 
+    #static test only
     #Reduce Matrices
     k = RedMatrix(k, u_DOF)
     m = RedMatrix(m, u_DOF)
     c = RedMatrix(c, u_DOF)
 
     #Define starting values vector (reduced)
-    l = k.shape[0]
+    l = k.shape[0]          #sem -1 burro
     x_0 = np.zeros([l,1])
     x_0_d = np.zeros([l,1])
     x_0_d2 = np.zeros([l,1])
@@ -961,18 +961,27 @@ def DinamicSolver(m:np.ndarray, c:np.ndarray, k:np.ndarray, f:np.ndarray, u_DOF:
         gamma = 1/2
         beta = 1/4
     
-    while tk <= t_final :
+    #time constraints
+    l = t_col.shape[0] - 1 
+    tk = t_col[0,0]
+    t_final = t_col[l,0]
+    fg = 0
     
+    while tk <= t_final :
+        
         #Force vector for current tk
-        #f = Carr_t(loading, tk, t_col, P_col)
-        #f = RedMatrix(f, u_DOF)
+        f = load_p(vpe, ne, p_col[fg,0], pressure_nodes)
+        f = RedMatrix(f, u_DOF)
 
         #Starting value [x_d2_(0)]
         x_0_d2 = np.linalg.inv(m) @ (f - (c @ x_0_d ) - (k @ x_0))
         
         #Time increment:
-        tk += delta_t
-
+        tk0 = tk
+        fg += 1
+        tk = t_col[fg,0]
+        delta_t = tk - tk0
+        
         #Prediction:
         x_1_d = x_0_d + (1 - gamma) * delta_t * x_0_d2
         x_1 = x_0 + delta_t * x_0_d + (0.5 - beta)*(delta_t**2) * x_0_d2
@@ -1051,4 +1060,4 @@ c = c_global(k, m_gl, natfreq[0], natfreq[1])                 #calculo matriz C
 #c_df.to_excel('c.xlsx', index=False)                         #guardar DF no excel
 #print(c)
 
-#DinamicSolver(m:np.ndarray, c:np.ndarray, k:np.ndarray, f:np.ndarray, x_0:np.ndarray, x_0_d:np.ndarray, u_DOF:np.ndarray, tk:float, delta_t:float, t_final:float, loading, t_col, P_col)
+matrix_u, matrix_ud, matrix_ud2 = DinamicSolver(k, m_gl, c, u_DOF, t_col, p_col, vpe, len(vpe), pressure_nodes)

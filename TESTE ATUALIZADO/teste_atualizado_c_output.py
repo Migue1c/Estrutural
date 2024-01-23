@@ -359,6 +359,8 @@ def Mesh_Properties():
     
     return mesh, u_DOF, vpe, material, pressure_nodes, t_col, p_col, static_pressure
 
+
+
 #PARTE ALFAGEM
 #ESTÁTICA
 def Bi(s1:float, index:int, r:float, vpe) -> np.ndarray:
@@ -589,12 +591,14 @@ def FS(displacements, vpe, mat, VM, tensões_N):     #FSy - deformação plastic
 
 #QUITÉRIO
 #CARREGAMENTO
+#vetor carregamento (mesh também)
 def loading(ne: int, vpe, pressure) -> None:  # To be verified
     load_vct = np.zeros(3 * (ne + 1))
     for i in range(0, ne):
         phi = vpe[i, 1]
         ri = vpe[i, 0]
         hi = vpe[i, 2]
+        p = pressure[i]
         #print(phi, ri, hi, p)
         v_carr = np.zeros(6)
         A11 = 0.5 * ri * (-np.sin(phi)) - (3 / 20) * np.sin(phi) ** 2 * hi
@@ -609,6 +613,7 @@ def loading(ne: int, vpe, pressure) -> None:  # To be verified
 
     return load_vct
 
+#carregamento dinâmico
 def func_carr_t (funcoes, A, B, w, b, t_final, pi, util, t_col, p_col):
     if util[0] == 1:
         n = np.size(funcoes)
@@ -732,7 +737,8 @@ def load_p(vpe, ne, P, pressure_nodes):
 
     return load_vct
 
-
+    
+    
 
 #BOMBAS
 #MODAL
@@ -981,6 +987,7 @@ def DinamicSolver(m:np.ndarray, c:np.ndarray, k:np.ndarray, f:np.ndarray, u_DOF:
 
 
 
+
 #############################################################################################################################################
 #############################################################################################################################################
 #############################################################################################################################################
@@ -1031,8 +1038,8 @@ natfreq, eig_vect = ModalSolver(k, m_gl, u_DOF)               #calculo valores e
 #ANÁLISE DINÂMICA
 #MATRIZ C
 c = c_global(k, m_gl, natfreq[0], natfreq[1])                   #calculo matriz C
-c_df = pd.DataFrame(c)                                      #converter pra dataframe
-c_df.to_excel('c.xlsx', index=False)                        #guardar DF no excel
+#c_df = pd.DataFrame(c)                                      #converter pra dataframe
+#c_df.to_excel('c.xlsx', index=False)                        #guardar DF no excel
 #print(c)
 
 #DinamicSolver(m:np.ndarray, c:np.ndarray, k:np.ndarray, f:np.ndarray, x_0:np.ndarray, x_0_d:np.ndarray, u_DOF:np.ndarray, tk:float, delta_t:float, t_final:float, loading, t_col, P_col)

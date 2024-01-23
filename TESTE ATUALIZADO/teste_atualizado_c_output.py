@@ -231,7 +231,7 @@ def Mesh_Properties():
     
     if 1==1: ################## A alterar, para variar com os dados inseridos no excel
         # Interpolation Linear Type
-        columns_interpolate     = ['thi', 'Loading', 'z', 'r']
+        columns_interpolate     = ['z', 'r']
         df[columns_interpolate] = df[columns_interpolate].interpolate(method='linear')
         df.loc[len(df)-1, 'thi'] = np.nan 
 

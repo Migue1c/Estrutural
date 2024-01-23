@@ -571,15 +571,6 @@ def FS(displacements, vpe, mat, VM, tensões_N):     #FSy - deformação plastic
 
 #QUITÉRIO
 #CARREGAMENTO
-
-def medium_pressure(pressao, ne):
-    pressao = pressao.reshape(-1)
-    press_medium = np.zeros(ne)
-    for i in range(0, ne):
-        press_medium[i] = (pressao[i+1] + pressao[i])/2
-    #print(press_medium)
-    return press_medium
-
 def loading(ne: int, vpe, pressure) -> None:  # To be verified
     load_vct = np.zeros(3 * (ne + 1))
     for i in range(0, ne):
@@ -985,9 +976,8 @@ k = k_global(len(vpe), vpe, material)                       #calculo matriz K
 #k_df = pd.DataFrame(k)                                      #converter pra dataframe
 #k_df.to_excel('k.xlsx', index=False)                        #guardar DF no excel
 
-#CARREGAMENTO
-medium_p = static_pressure                                                                  # vetor com a pressão média dos nós, respetiva à pressão nos elementos
-carr = loading(len(vpe), vpe, medium_p)                                                     #calcular vetor de carregamento (como array 1D)
+#CARREGAMENTO                                                         
+carr = loading(len(vpe), vpe,static_pressure)                                                     #calcular vetor de carregamento (como array 1D)
 f_vect = np.reshape(carr,(-1,1))                                                            #converter carr para um vetor (array 2D)
 #print("vetor carregamento:\n",f_vect)                   
 

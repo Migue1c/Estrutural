@@ -558,6 +558,24 @@ def FS(displacements, vpe, mat, VM, tensões_N):     #FSy - deformação plastic
         else:
             FSU[i] = FSc
             #print(FSc)
+    if von_mises[i+1] == 0:
+        FSy[i+1] = 10
+    else:
+        FSy[i+1] = mat[3, int(vpe[i, 4]) - 1] / von_mises[i+1]  
+    FSc = 10**6
+    FSt = FSc
+    if np.any(tensões_N[i+1,:] < 0):
+        FSc = mat[5, int(vpe[i,4])-1] / np.min(tensões_N[i+1,:])
+        #print(min(tensões_N[i,:]))
+    if np.any(tensões_N[i+1,:] > 0):
+        FSt = mat[4 ,int(vpe[i,4])-1] / np.max(tensões_N[i+1,:])
+        #print(FSt)
+    if np.abs(FSt) < np.abs(FSc):
+        FSU[i+1] = FSt
+        #print(FSt)
+    else:
+        FSU[i+1] = FSc
+        #print(FSc)
     return FSy, FSU
 '''
 0-Density [kg/m^3]
@@ -634,7 +652,7 @@ def func_carr_t (funcoes, A, B, w, b, t_final, pi, util, t_col, p_col):
                 P_2 = np.zeros(t_iter2)
                 for i in range (0, t_iter2):
                     t_2 = t_exp[i]
-                    P_2[i] = A2*np.exp(B2*t_2) * P[first_zero_index2-1]
+                    P_2[i] = A2*np.exp(B2*t_2) + P[first_zero_index2-1] - 1
                 #print(t_2)
                 P[first_zero_index2:last_index2] = P_2
 
@@ -682,12 +700,39 @@ def Carr_t(loading, t, T, P, press_max_est):
     print(loading)
     return loading
 
+#carregamento dinâmico só com teste estático
+#(entra pressão -> saí vetor carregamento ; variação dos valores feita pela função da solução dinâmica)
 def load_p(vpe, ne, P, pressure_nodes):
-    max = np.amax(pressure_nodes)
-    for i in range (0,ne):
-        pressure_nodes = pressure_nodes / max * P
 
-    
+    max = np.amax(pressure_nodes)
+    pressure_nodes1 = np.zeros(np.size(pressure_nodes))
+    for i in range(0, ne+1):
+        pressure_nodes1[i] = pressure_nodes[i] / max * P
+    #pressão media
+    press_medium = np.zeros(ne)
+    for i in range(0, ne):
+        press_medium[i] = (pressure_nodes1[i + 1] + pressure_nodes1[i]) / 2
+    #vetor carregamento
+    load_vct = np.zeros(3 * (ne + 1))
+    for i in range(0, ne):
+        phi = vpe[i, 1]
+        ri = vpe[i, 0]
+        hi = vpe[i, 2]
+        p = press_medium[i]
+        v_carr = np.zeros(6)
+        A11 = 0.5 * ri * (-np.sin(phi)) - (3 / 20) * np.sin(phi) ** 2 * hi
+        A12 = 0.5 * ri * np.cos(phi) + (3 / 20) * np.sin(phi) * np.cos(phi) * hi
+        A13 = hi * ((1 / 12) * ri + (1 / 30) * hi * np.sin(phi))
+        A14 = 0.5 * ri * (-np.sin(phi)) - (7 / 20) * hi * np.sin(phi) ** 2
+        A15 = 0.5 * ri * np.cos(phi) + (7 / 20) * hi * np.sin(phi) * np.cos(phi)
+        A16 = hi * (-(1 / 12) * ri - (1 / 20) * hi * np.sin(phi))
+        v_carr = 2 * np.pi * hi * p * np.array([A11, A12, A13, A14, A15, A16])
+
+        load_vct[3 * i:3 * i + 6] = load_vct[3 * i:3 * i + 6] + v_carr
+
+    return load_vct
+
+
 
 #BOMBAS
 #MODAL
@@ -713,7 +758,6 @@ def Mestacked(ne:int, vpe, mat, ni:int, simpson=True) -> np.ndarray:
     return mes
 
 def m_global(ne:int, vpe, mat, ni=1200, sparse=False) -> np.ndarray:
-    global m_globalM
     mes = Mestacked(ne, vpe, mat, ni)
     if sparse:
         row = []
@@ -749,6 +793,7 @@ def m_global(ne:int, vpe, mat, ni=1200, sparse=False) -> np.ndarray:
     natfreq = np.sort(np.sqrt(eig_vals))
     return natfreq
 
+
 #ESTEVES
 #DINÂMICA
 
@@ -761,6 +806,7 @@ def c_global(k_globalM, m_globalM, mode1:float, mode2:float, zeta1=0.08, zeta2=0
 
     c_globalM = alfa*m_globalM + beta*k_globalM
     return c_globalM
+
 
 
 #SOLUÇÃO
@@ -820,7 +866,7 @@ def StaticSolver(k:np.ndarray, f:np.ndarray, u_DOF:np.ndarray):
 def ModalSolver(k:np.ndarray, m:np.ndarray, u_DOF:np.ndarray):
 
     #Reduce stiffness and mass matrices
-    k_red = RedMatrix(k, u_DOF)             #must be able to run independent analysis 
+    k_red = RedMatrix(k, u_DOF)          
     m_red = RedMatrix(m, u_DOF)
 
     #Solve the eigenvalue problem
@@ -833,10 +879,7 @@ def ModalSolver(k:np.ndarray, m:np.ndarray, u_DOF:np.ndarray):
     eig_vals, eig_vect = sp.linalg.eig(k_red, m_red)
 
     #filter the results
-    
-    eig_vals = np.copy(eig_vals.reshape((-1,1)))
-    eig_vals = np.asarray(eig_vals,dtype=float)
-
+    eig_vals = np.array(eig_vals,dtype=float)
     i=int(len(eig_vals)-1)
     while i>=0:
         if eig_vals[i] <= 0:
@@ -850,53 +893,43 @@ def ModalSolver(k:np.ndarray, m:np.ndarray, u_DOF:np.ndarray):
     #re-add zeros to the eigenvectors matrix
     eig_vect = RdfMatrix(eig_vect, u_DOF)
 
-
+    #sort values 
     guide_vect = np.argsort(eig_vals)
     natfreq = np.sort(np.sqrt(eig_vals))
 
+    #sort vector
     new_mtx = np.zeros((len(eig_vect),len(guide_vect)))
-    
     n=0
     for i in guide_vect:
         new_mtx[:,n] = eig_vect[:,i]
         n += 1
-    
     eig_vect = new_mtx
 
     return natfreq, eig_vect
 
 #Dinamic Solution:
-def DinamicSolver(m:np.ndarray, c:np.ndarray, k:np.ndarray, f:np.ndarray, x_0:np.ndarray, x_0_d:np.ndarray, u_DOF:np.ndarray, tk:float, delta_t:float, t_final:float, loading, t_col, P_col):
-
-    #Matrices to store results
-    global matrix_u
-    global matrix_ud 
-    global matrix_ud2   
-
-    #Starting value for the force vector
-    #f = Carr_t(loading, tk, t_col, P_col)
+#loading, t_col, P_col
+#inputs need change
+def DinamicSolver(m:np.ndarray, c:np.ndarray, k:np.ndarray, f:np.ndarray, u_DOF:np.ndarray, tk:float, delta_t:float, t_final:float):
 
     #Reduce Matrices
     k = RedMatrix(k, u_DOF)
     m = RedMatrix(m, u_DOF)
     c = RedMatrix(c, u_DOF)
-    f = RedMatrix(f, u_DOF)
 
-    
-    #on the final version add an "if" to check if vectors already reduced or not
-    #or something to define them as  0
-    x_0 = RedMatrix(x_0, u_DOF)
-    x_0_d = RedMatrix(x_0_d, u_DOF)
+    #Define starting values vector (reduced)
+    l = k.shape[0]
+    x_0 = np.zeros([l,1])
+    x_0_d = np.zeros([l,1])
+    x_0_d2 = np.zeros([l,1])
 
-    #Store starting values:
+    #Define matrices to store results
     matrix_u = x_0
     matrix_ud = x_0_d
-    x_0_d2 = np.linalg.inv(m) @ (f - (c @ x_0_d ) - (k @ x_0))
     matrix_ud2 = x_0_d2
-    
+   
     #0 for Average Acceleration Method; 1 for Linear Acceleration Method
     method = 0
-
     if method == 0:
         #Average Acceleration Method:
         gamma = 1/2
@@ -906,12 +939,11 @@ def DinamicSolver(m:np.ndarray, c:np.ndarray, k:np.ndarray, f:np.ndarray, x_0:np
         gamma = 1/2
         beta = 1/4
     
-
-    while tk < t_final :
-        
+    while tk <= t_final :
+    
         #Force vector for current tk
         #f = Carr_t(loading, tk, t_col, P_col)
-        f = RedMatrix(f, u_DOF)
+        #f = RedMatrix(f, u_DOF)
 
         #Starting value [x_d2_(0)]
         x_0_d2 = np.linalg.inv(m) @ (f - (c @ x_0_d ) - (k @ x_0))
@@ -920,46 +952,33 @@ def DinamicSolver(m:np.ndarray, c:np.ndarray, k:np.ndarray, f:np.ndarray, x_0:np
         tk += delta_t
 
         #Prediction:
-        x_tk1_d = x_0_d + (1 - gamma) * delta_t * x_0_d2
-        x_tk1 = x_0 + delta_t * x_0_d + (0.5 - beta)*(delta_t**2) * x_0_d2
+        x_1_d = x_0_d + (1 - gamma) * delta_t * x_0_d2
+        x_1 = x_0 + delta_t * x_0_d + (0.5 - beta)*(delta_t**2) * x_0_d2
         
         #Equilibrium eqs.:
         s = m + (gamma * delta_t * c) + (beta * (delta_t**2) * k)
-        x_tk1_d2 = np.linalg.inv(s) @ (f - (c @ x_0_d) - (k @ x_0) )
+        x_1_d2 = np.linalg.inv(s) @ (f - (c @ x_0_d) - (k @ x_0) )
        
         #Correction:
-        x_tk1_d = x_tk1_d + delta_t * gamma * x_tk1_d2
-        x_tk1 = x_tk1 + (delta_t**2) * beta * x_tk1_d2
+        x_1_d = x_1_d + delta_t * gamma * x_1_d2
+        x_1 = x_1 + (delta_t**2) * beta * x_1_d2
        
         #store values in matrices
-        matrix_u = np.append(matrix_u, x_tk1, axis=1)
-        matrix_ud = np.append(matrix_ud, x_tk1_d, axis=1)
-        matrix_ud2 = np.append(matrix_ud2, x_tk1_d2, axis=1)
+        matrix_u = np.append(matrix_u, x_1, axis=1)
+        matrix_ud = np.append(matrix_ud, x_1_d, axis=1)
+        matrix_ud2 = np.append(matrix_ud2, x_1_d2, axis=1)
 
         #reset starting values for next iteration:
-        x_0 = x_tk1
-        x_0_d = x_tk1_d
+        x_0 = x_1
+        x_0_d = x_1_d
 
     #add lines with zeros to the matrices
     matrix_u = RdfMatrix(matrix_u, u_DOF)
     matrix_ud = RdfMatrix(matrix_ud, u_DOF)
     matrix_ud2 = RdfMatrix(matrix_ud2, u_DOF)
 
+    return matrix_u, matrix_ud, matrix_ud2
 
-
-'''
-seg_max = np.max(t_final)
-
-    if util[0] == 1:
-        P = func_carr_t(funcoes, A, B, w, b, t_final, pi, seg_max)[0]
-        T = func_carr_t(funcoes, A, B, w, b, t_final, pi, seg_max)[1]
-    elif util[0] == 0:
-        P = ler pelo olim
-        T = ""
-    
-#carregamento Dinamico
-press_max_est = np.max(pressure_nodes)
-'''
 
 
 #############################################################################################################################################

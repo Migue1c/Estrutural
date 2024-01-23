@@ -135,7 +135,7 @@ def Mesh_Properties():
         #Normalizar o vetor        
         #Calcular o ponto e adicionar ao DataFrame
         
-    if 1==1: ################## A alterar, para variar com os dados inseridos no excel
+    if 1==0: ################## A alterar, para variar com os dados inseridos no excel
         i = 0
         while i < (len(df['Points'])):
             
@@ -212,9 +212,9 @@ def Mesh_Properties():
     df[columns_interpolate] = df[columns_interpolate].interpolate(method='linear')
     df.loc[len(df)-1, 'thi'] = np.nan 
     
-    if 1==0: ################## A alterar, para variar com os dados inseridos no excel
+    if 1==1: ################## A alterar, para variar com os dados inseridos no excel
         # Interpolation Linear Type
-        columns_interpolate     = ['thi', 'Loading', 'z', 'r']
+        columns_interpolate     = ['z', 'r']
         df[columns_interpolate] = df[columns_interpolate].interpolate(method='linear')
         df.loc[len(df)-1, 'thi'] = np.nan 
 
@@ -320,18 +320,27 @@ def Mesh_Properties():
 
     vpe = np.array(vpe.values)
 
-    
+    '''
     #Graphic of the points
     df.plot(x='r', y='z', marker='o', linestyle='-', color='k', label='Nós')
     plt.gca().invert_yaxis()
     plt.legend(loc='center left')
     plt.show()
-    
+    '''
     
     #print(material)
     #print(vpe)
+
+     ################### Static - Loading
+    loading = df['Loading'].to_numpy().reshape(-1)
+    static_pressure = np.zeros(len(vpe)) # Builds a array filled with zeros with the length of the number of elements
     
-    return mesh, u_DOF, vpe, material, pressure_nodes, t_col, p_col
+    for i in range(0, len(vpe)):
+        static_pressure[i] = (loading[i+1] + loading[i]) / 2 # The pressure aplied in the element is the average of the nodal values
+    #print(static_pressure)
+
+    
+    return mesh, u_DOF, vpe, material, pressure_nodes, t_col, p_col, static_pressure
 
 
 
@@ -516,7 +525,10 @@ def FS(displacements, vpe, mat, VM, tensões_N):     #FSy - deformação plastic
     FSy = np.empty((ne+1))
     FSU = np.empty((ne+1))
     for i in range(ne):
-        FSy[i] = mat[3 ,int(vpe[i,4])-1]/von_mises[i]    
+        if von_mises[i] == 0:
+            FSy[i] = 10
+        else:
+            FSy[i] = mat[3, int(vpe[i, 4]) - 1] / von_mises[i]  
         FSc = 10**6
         FSt = FSc
         if np.any(tensões_N[i,:] < 0):
@@ -531,6 +543,24 @@ def FS(displacements, vpe, mat, VM, tensões_N):     #FSy - deformação plastic
         else:
             FSU[i] = FSc
             #print(FSc)
+    if von_mises[i+1] == 0:
+        FSy[i+1] = 10
+    else:
+        FSy[i+1] = mat[3, int(vpe[i, 4]) - 1] / von_mises[i+1]  
+    FSc = 10**6
+    FSt = FSc
+    if np.any(tensões_N[i+1,:] < 0):
+        FSc = mat[5, int(vpe[i,4])-1] / np.min(tensões_N[i+1,:])
+        #print(min(tensões_N[i,:]))
+    if np.any(tensões_N[i+1,:] > 0):
+        FSt = mat[4 ,int(vpe[i,4])-1] / np.max(tensões_N[i+1,:])
+        #print(FSt)
+    if np.abs(FSt) < np.abs(FSc):
+        FSU[i+1] = FSt
+        #print(FSt)
+    else:
+        FSU[i+1] = FSc
+        #print(FSc)
     return FSy, FSU
 '''
 0-Density [kg/m^3]
@@ -542,19 +572,8 @@ def FS(displacements, vpe, mat, VM, tensões_N):     #FSy - deformação plastic
 6-Shear Strength [MPa]
 '''
 
-
-
 #QUITÉRIO
 #CARREGAMENTO
-
-#pressão média (vai passar para a mesh)
-def medium_pressure(pressao, ne):
-    pressao = pressao.reshape(-1)
-    press_medium = np.zeros(ne)
-    for i in range(0, ne):
-        press_medium[i] = (pressao[i+1] + pressao[i])/2
-    #print(press_medium)
-    return press_medium
 #vetor carregamento (mesh também)
 def loading(ne: int, vpe, pressure) -> None:  # To be verified
     load_vct = np.zeros(3 * (ne + 1))
@@ -728,7 +747,6 @@ def Mestacked(ne:int, vpe, mat, ni:int, simpson=True) -> np.ndarray:
     return mes
 
 def m_global(ne:int, vpe, mat, ni=1200, sparse=False) -> np.ndarray:
-    global m_globalM
     mes = Mestacked(ne, vpe, mat, ni)
     if sparse:
         row = []
@@ -777,9 +795,6 @@ def c_global(k_globalM, m_globalM, mode1:float, mode2:float, zeta1=0.08, zeta2=0
 
     c_globalM = alfa*m_globalM + beta*k_globalM
     return c_globalM
-
-
-
 
 
 
@@ -955,28 +970,13 @@ def DinamicSolver(m:np.ndarray, c:np.ndarray, k:np.ndarray, f:np.ndarray, u_DOF:
 
 
 
-'''
-seg_max = np.max(t_final)
-
-    if util[0] == 1:
-        P = func_carr_t(funcoes, A, B, w, b, t_final, pi, seg_max)[0]
-        T = func_carr_t(funcoes, A, B, w, b, t_final, pi, seg_max)[1]
-    elif util[0] == 0:
-        P = ler pelo olim
-        T = ""
-
-#carregamento Dinamico
-press_max_est = np.max(pressure_nodes)
-'''
-
-
 #############################################################################################################################################
 #############################################################################################################################################
 #############################################################################################################################################
 
 
 #LEITURA DO FICHEIRO
-mesh, u_DOF, vpe, material, pressure_nodes, t_col, P_col = Mesh_Properties()
+mesh, u_DOF, vpe, material, pressure_nodes, t_col, P_col, static_pressure = Mesh_Properties()
 
 #ANÁLISE ESTÁTICAs
 #MATRIZ K
@@ -985,8 +985,7 @@ k = k_global(len(vpe), vpe, material)                       #calculo matriz K
 #k_df.to_excel('k.xlsx', index=False)                        #guardar DF no excel
 
 #CARREGAMENTO
-medium_p = medium_pressure(pressure_nodes, len(vpe))        #calcular pressão média
-carr = loading(len(vpe), vpe, medium_p)                     #calcular vetor de carregamento (como array 1D)
+carr = loading(len(vpe), vpe, static_pressure)                     #calcular vetor de carregamento (como array 1D)
 f_vect = np.reshape(carr,(-1,1))                            #converter carr para um vetor (array 2D)
 #print("vetor carregamento:\n",f_vect)                   
 

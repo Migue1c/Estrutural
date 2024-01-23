@@ -106,9 +106,10 @@ def ModalSolver(k:np.ndarray, m:np.ndarray, u_DOF:np.ndarray):
     return natfreq, eig_vect
 
 #Dinamic Solution:
-#loading, t_col, P_col
-#inputs need change
-def DinamicSolver(m:np.ndarray, c:np.ndarray, k:np.ndarray, f:np.ndarray, u_DOF:np.ndarray, tk:float, delta_t:float, t_final:float):
+
+
+#Original version
+#def DinamicSolver(m:np.ndarray, c:np.ndarray, k:np.ndarray, f:np.ndarray, u_DOF:np.ndarray, tk:float, delta_t:float, t_final:float): #loading, t_col, P_col
 
     #Reduce Matrices
     k = RedMatrix(k, u_DOF)
@@ -149,6 +150,87 @@ def DinamicSolver(m:np.ndarray, c:np.ndarray, k:np.ndarray, f:np.ndarray, u_DOF:
         #Time increment:
         tk += delta_t
 
+        #Prediction:
+        x_1_d = x_0_d + (1 - gamma) * delta_t * x_0_d2
+        x_1 = x_0 + delta_t * x_0_d + (0.5 - beta)*(delta_t**2) * x_0_d2
+        
+        #Equilibrium eqs.:
+        s = m + (gamma * delta_t * c) + (beta * (delta_t**2) * k)
+        x_1_d2 = np.linalg.inv(s) @ (f - (c @ x_0_d) - (k @ x_0) )
+       
+        #Correction:
+        x_1_d = x_1_d + delta_t * gamma * x_1_d2
+        x_1 = x_1 + (delta_t**2) * beta * x_1_d2
+       
+        #store values in matrices
+        matrix_u = np.append(matrix_u, x_1, axis=1)
+        matrix_ud = np.append(matrix_ud, x_1_d, axis=1)
+        matrix_ud2 = np.append(matrix_ud2, x_1_d2, axis=1)
+
+        #reset starting values for next iteration:
+        x_0 = x_1
+        x_0_d = x_1_d
+
+    #add lines with zeros to the matrices
+    matrix_u = RdfMatrix(matrix_u, u_DOF)
+    matrix_ud = RdfMatrix(matrix_ud, u_DOF)
+    matrix_ud2 = RdfMatrix(matrix_ud2, u_DOF)
+
+    return matrix_u, matrix_ud, matrix_ud2
+
+
+#STATIC TEST VERSION
+def DinamicSolver(m:np.ndarray, c:np.ndarray, k:np.ndarray, u_DOF:np.ndarray, t_col, P_col, cenas_da_função_do_quiterio):
+
+    #static test only
+    #Reduce Matrices
+    k = RedMatrix(k, u_DOF)
+    m = RedMatrix(m, u_DOF)
+    c = RedMatrix(c, u_DOF)
+
+    #Define starting values vector (reduced)
+    l = k.shape[0]          #sem -1 burro
+    x_0 = np.zeros([l,1])
+    x_0_d = np.zeros([l,1])
+    x_0_d2 = np.zeros([l,1])
+
+    #Define matrices to store results
+    matrix_u = x_0
+    matrix_ud = x_0_d
+    matrix_ud2 = x_0_d2
+   
+    #0 for Average Acceleration Method; 1 for Linear Acceleration Method
+    method = 0
+    if method == 0:
+        #Average Acceleration Method:
+        gamma = 1/2
+        beta =  1/6
+    else:
+        #Linear Acceleration Method:
+        gamma = 1/2
+        beta = 1/4
+    
+    #time constraints
+    l = t_col.shape[0] - 1 
+    tk = t_col[0,0]
+    t_final = t_col[l,0]
+    fg = 0
+    
+    while tk <= t_final :
+        
+        #Force vector for current tk
+        f = funçao_carr_ou_o_crlh(inputs necessários, P_col[fg,0])
+        f = RedMatrix(f, u_DOF)
+
+        #Starting value [x_d2_(0)]
+        x_0_d2 = np.linalg.inv(m) @ (f - (c @ x_0_d ) - (k @ x_0))
+        
+        #Time increment:
+        tk0 = tk
+        fg += 1
+        tk = t_col[fg,0]
+        delta_t = tk - tk0
+        
         #Prediction:
         x_1_d = x_0_d + (1 - gamma) * delta_t * x_0_d2
         x_1 = x_0 + delta_t * x_0_d + (0.5 - beta)*(delta_t**2) * x_0_d2

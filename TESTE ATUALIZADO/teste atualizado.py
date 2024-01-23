@@ -826,13 +826,11 @@ def ModalSolver(k:np.ndarray, m:np.ndarray, u_DOF:np.ndarray):
     eig_vals, eig_vect = sp.linalg.eig(k_red, m_red)
 
     #filter the results
-    eig_vals = np.reshape(eig_vals,(-1,1))
-    
     eig_vals = np.array(eig_vals,dtype=float)
     i=int(len(eig_vals)-1)
     while i>=0:
-        if eig_vals[i,0] <= 0:
-            eig_vals = np.delete(eig_vals, i, axis=0)
+        if eig_vals[i] <= 0:
+            eig_vals = np.delete(eig_vals, i)
             eig_vect = np.delete(eig_vect, i, axis=1)
         i -= 1  
     #print("lenght valores proprios:",len(eig_vals))
@@ -842,16 +840,16 @@ def ModalSolver(k:np.ndarray, m:np.ndarray, u_DOF:np.ndarray):
     #re-add zeros to the eigenvectors matrix
     eig_vect = RdfMatrix(eig_vect, u_DOF)
 
-    
+    #sort values 
     guide_vect = np.argsort(eig_vals)
     natfreq = np.sort(np.sqrt(eig_vals))
 
+    #sort vector
     new_mtx = np.zeros((len(eig_vect),len(guide_vect)))
     n=0
     for i in guide_vect:
-        new_mtx[:,n] = eig_vals[:,i]
+        new_mtx[:,n] = eig_vect[:,i]
         n += 1
-    
     eig_vect = new_mtx
 
     return natfreq, eig_vect

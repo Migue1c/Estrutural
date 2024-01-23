@@ -198,7 +198,7 @@ def func_carr_t (funcoes, A, B, w, b, t_final, pi, util, t_col, p_col):
                 P_2 = np.zeros(t_iter2)
                 for i in range (0, t_iter2):
                     t_2 = t_exp[i]
-                    P_2[i] = A2*np.exp(B2*t_2) * P[first_zero_index2-1]
+                    P_2[i] = A2*np.exp(B2*t_2) + P[first_zero_index2-1] - 1
                 #print(t_2)
                 P[first_zero_index2:last_index2] = P_2
 
@@ -245,6 +245,36 @@ def Carr_t(loading, t, T, P, press_max_est):
     loading = loading * P_t_adim
     print(loading)
     return loading
+
+def load_p(vpe, ne, P, pressure_nodes):
+
+    max = np.amax(pressure_nodes)
+    pressure_nodes1 = np.zeros(np.size(pressure_nodes))
+    for i in range(0, ne+1):
+        pressure_nodes1[i] = pressure_nodes[i] / max * P
+    #pressão media
+    press_medium = np.zeros(ne)
+    for i in range(0, ne):
+        press_medium[i] = (pressure_nodes1[i + 1] + pressure_nodes1[i]) / 2
+    #vetor carregamento
+    load_vct = np.zeros(3 * (ne + 1))
+    for i in range(0, ne):
+        phi = vpe[i, 1]
+        ri = vpe[i, 0]
+        hi = vpe[i, 2]
+        p = press_medium[i]
+        v_carr = np.zeros(6)
+        A11 = 0.5 * ri * (-np.sin(phi)) - (3 / 20) * np.sin(phi) ** 2 * hi
+        A12 = 0.5 * ri * np.cos(phi) + (3 / 20) * np.sin(phi) * np.cos(phi) * hi
+        A13 = hi * ((1 / 12) * ri + (1 / 30) * hi * np.sin(phi))
+        A14 = 0.5 * ri * (-np.sin(phi)) - (7 / 20) * hi * np.sin(phi) ** 2
+        A15 = 0.5 * ri * np.cos(phi) + (7 / 20) * hi * np.sin(phi) * np.cos(phi)
+        A16 = hi * (-(1 / 12) * ri - (1 / 20) * hi * np.sin(phi))
+        v_carr = 2 * np.pi * hi * p * np.array([A11, A12, A13, A14, A15, A16])
+
+        load_vct[3 * i:3 * i + 6] = load_vct[3 * i:3 * i + 6] + v_carr
+
+    return load_vct
 
 
 def main():

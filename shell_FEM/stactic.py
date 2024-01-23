@@ -110,7 +110,7 @@ def k_global(ne:int, vpe, mat, ni=1200, sparse=False) -> np.ndarray:
  
 
 def calculate_strains_stresses(displacements, vpe, mat):
-    num_nodes = len(displacements)/3
+    num_nodes = int(len(displacements)/3)
     num_elements = len(vpe)
 
     strains = np.zeros((num_nodes, 4))  # Matriz para armazenar as deformações de cada nó (epsilon_s, epsilon_theta, chi_s, chi_theta)
@@ -118,11 +118,12 @@ def calculate_strains_stresses(displacements, vpe, mat):
         R = vpe[i,0]
         phi = vpe[i,1]
         B = Bmatrix(0, i, R, phi, vpe)  # Obtém a matriz B para s1 = 0 
-        strains[i,:] += B @ displacements[3*i:3*i+6]  # Multiplica deslocamentos pelos valores da matriz B exceto o ultimo
+        #print("Matriz B",B)
+        strains[i,:] += B @ displacements[3*i:3*i+6,0]  # Multiplica deslocamentos pelos valores da matriz B exceto o ultimo
     i = num_elements - 1
     h = vpe[i, 2]
     B = Bmatrix(1, i, R +h*np.sin(phi), phi, vpe)  # Obtém a matriz B para s1 = 1
-    strains[i+1,:] += B @ displacements[3*i:3*i+6]  # Multiplica deslocamentos pelos valores da matriz B obtendo a ultima extensao
+    strains[i+1,:] += B @ displacements[3*i:3*i+6,0]  # Multiplica deslocamentos pelos valores da matriz B obtendo a ultima extensao
 
     forças_N = np.zeros((num_nodes, 4))
     for i in range(num_elements):
@@ -130,31 +131,88 @@ def calculate_strains_stresses(displacements, vpe, mat):
         forças_N[i,:] += D @ (strains[i,:].T)
     forças_N[i+1,:] += D @ (strains[i+1,:].T)          
 
+    #tensoes_N vai ser uma matriz em que cada coluna corresponde a [sigma_sd, sigma_td, sigma_sf, sigma_tf], em que d(dentro) e f(fora) 
     tensoes_N = np.zeros((num_nodes, 4))
+    tensoes_memb = np.zeros((num_nodes, 2))
     for i in range(num_elements):
         t = vpe[i, 3]
-        sigma_sd = forças_N[i,0]/t -  6*forças_N[i,2]/t**2
-        sigma_sf = forças_N[i,0]/t +  6*forças_N[i,2]/t**2
-        sigma_td = forças_N[i,1]/t -  6*forças_N[i,3]/t**2
-        sigma_tf = forças_N[i,1]/t +  6*forças_N[i,3]/t**2
+        sigma_s = forças_N[i,0]/t
+        sigma_t = forças_N[i,1]/t
+        tensoes_memb[i, :] = [sigma_s, sigma_t]
+
+        sigma_sd = sigma_s -  6*forças_N[i,2]/t**2
+        sigma_sf = sigma_s +  6*forças_N[i,2]/t**2
+        sigma_td = sigma_t -  6*forças_N[i,3]/t**2
+        sigma_tf = sigma_t +  6*forças_N[i,3]/t**2
         tensoes_N[i, :] = [sigma_sd, sigma_td, sigma_sf, sigma_tf]
     i += 1
-    sigma_sd = forças_N[i,0]/t - 6*forças_N[i,2]/t**2
-    sigma_sf = forças_N[i,0]/t + 6*forças_N[i,2]/t**2
-    sigma_td = forças_N[i,1]/t - 6*forças_N[i,3]/t**2
-    sigma_tf = forças_N[i,1]/t +     6*forças_N[i,3]/t**2
-    tensoes_N[i, :] = [sigma_sd, sigma_td, sigma_sf, sigma_tf]
-    return strains, tensoes_N
+    sigma_s = forças_N[i,0]/t
+    sigma_t = forças_N[i,1]/t
+    tensoes_memb[i, :] = [sigma_s, sigma_t]
 
-def tensões_VM(displacements, vpe, mat):
-    num_nodes = len(displacements)/3
+    sigma_sd = sigma_s - 6*forças_N[i,2]/t**2
+    sigma_sf = sigma_s + 6*forças_N[i,2]/t**2
+    sigma_td = sigma_t - 6*forças_N[i,3]/t**2
+    sigma_tf = sigma_t + 6*forças_N[i,3]/t**2
+    tensoes_N[i, :] = [sigma_sd, sigma_td, sigma_sf, sigma_tf]
+    return strains, tensoes_N, tensoes_memb
+
+def tensões_VM(displacements, vpe, tensoes_N):      #matriz de duas colunas em que a primeira corresponde a dentro da casca e a segunda a fora da casca
+    num_nodes = int(len(displacements)/3)
     num_elements = len(vpe)
-    tensoes_N = calculate_strains_stresses(displacements, vpe, mat)
     VM = np.zeros((num_nodes, 2))
+
     for i in range(num_elements):
         VM[i,0] = np.sqrt(tensoes_N[i,0]**2 -tensoes_N[i,0]*tensoes_N[i,2] + tensoes_N[i,2]**2)
         VM[i,1] = np.sqrt(tensoes_N[i,1]**2 -tensoes_N[i,1]*tensoes_N[i,3] + tensoes_N[i,3]**2)
-    i = num_elements + 1
+    i += 1
     VM[i,0] = np.sqrt(tensoes_N[i,0]**2 -tensoes_N[i,0]*tensoes_N[i,2] + tensoes_N[i,2]**2)
     VM[i,1] = np.sqrt(tensoes_N[i,1]**2 -tensoes_N[i,1]*tensoes_N[i,3] + tensoes_N[i,3]**2)
     return VM
+
+def FS(displacements, vpe, mat, VM, tensões_N):     #FSy - deformação plastica  FSu - rutura
+    VM = tensões_VM(displacements, vpe, tensões_N)
+    von_mises = np.zeros(len(VM))
+    for i, row in enumerate(VM):
+        von_mises[i] += np.max(row)
+    ne = len(vpe)
+    FSy = np.empty((ne+1))
+    FSU = np.empty((ne+1))
+    for i in range(ne):
+        if von_mises[i] == 0:
+            FSy[i] = 10
+        else:
+            FSy[i] = mat[3, int(vpe[i, 4]) - 1] / von_mises[i]  
+        FSc = 10**6
+        FSt = FSc
+        if np.any(tensões_N[i,:] < 0):
+            FSc = mat[5, int(vpe[i,4])-1] / np.min(tensões_N[i,:])
+            #print(min(tensões_N[i,:]))
+        if np.any(tensões_N[i,:] > 0):
+            FSt = mat[4 ,int(vpe[i,4])-1] / np.max(tensões_N[i,:])
+            #print(FSt)
+        if np.abs(FSt) < np.abs(FSc):
+            FSU[i] = FSt
+            #print(FSt)
+        else:
+            FSU[i] = FSc
+            #print(FSc)
+    if von_mises[i+1] == 0:
+        FSy[i+1] = 10
+    else:
+        FSy[i+1] = mat[3, int(vpe[i, 4]) - 1] / von_mises[i+1]  
+    FSc = 10**6
+    FSt = FSc
+    if np.any(tensões_N[i+1,:] < 0):
+        FSc = mat[5, int(vpe[i,4])-1] / np.min(tensões_N[i+1,:])
+        #print(min(tensões_N[i,:]))
+    if np.any(tensões_N[i+1,:] > 0):
+        FSt = mat[4 ,int(vpe[i,4])-1] / np.max(tensões_N[i+1,:])
+        #print(FSt)
+    if np.abs(FSt) < np.abs(FSc):
+        FSU[i+1] = FSt
+        #print(FSt)
+    else:
+        FSU[i+1] = FSc
+        #print(FSc)
+    return FSy, FSU

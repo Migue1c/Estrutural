@@ -12,8 +12,6 @@ import os
 import warnings
 import time
 
-
-
 # Ignorar o aviso específico
 warnings.filterwarnings("ignore", message="The behavior of DataFrame concatenation with empty or all-NA entries is deprecated.*")
 warnings.filterwarnings("ignore", message="Conversion of an array with ndim > 0 to a scalar is deprecated.*")
@@ -359,8 +357,6 @@ def Mesh_Properties():
     
     return mesh, u_DOF, vpe, material, pressure_nodes, t_col, p_col, static_pressure
 
-
-
 #PARTE ALFAGEM
 #ESTÁTICA
 def Bi(s1:float, index:int, r:float, vpe) -> np.ndarray:
@@ -546,8 +542,9 @@ def FS(displacements, vpe, mat, VM, tensões_N):     #FSy - deformação plastic
             FSy[i] = 10
         else:
             FSy[i] = mat[3, int(vpe[i, 4]) - 1] / von_mises[i]  
-        FSc = 10**6
+        FSc = 10
         FSt = FSc
+        
         if np.any(tensões_N[i,:] < 0):
             FSc = mat[5, int(vpe[i,4])-1] / np.min(tensões_N[i,:])
             #print(min(tensões_N[i,:]))
@@ -557,6 +554,8 @@ def FS(displacements, vpe, mat, VM, tensões_N):     #FSy - deformação plastic
         if np.abs(FSt) < np.abs(FSc):
             FSU[i] = FSt
             #print(FSt)
+        #if np.any(tensões_N[i+1,:] == 0):
+            #fsu = 10
         else:
             FSU[i] = FSc
             #print(FSc)
@@ -564,7 +563,7 @@ def FS(displacements, vpe, mat, VM, tensões_N):     #FSy - deformação plastic
         FSy[i+1] = 10
     else:
         FSy[i+1] = mat[3, int(vpe[i, 4]) - 1] / von_mises[i+1]  
-    FSc = 10**6
+    FSc = 10
     FSt = FSc
     if np.any(tensões_N[i+1,:] < 0):
         FSc = mat[5, int(vpe[i,4])-1] / np.min(tensões_N[i+1,:])
@@ -578,6 +577,8 @@ def FS(displacements, vpe, mat, VM, tensões_N):     #FSy - deformação plastic
     else:
         FSU[i+1] = FSc
         #print(FSc)
+    #if np.any(tensões_N[i+1,:] == 0):
+        #fsu = 10
     return FSy, FSU
 '''
 0-Density [kg/m^3]
@@ -813,8 +814,6 @@ def c_global(k_globalM, m_globalM, mode1:float, mode2:float, zeta1=0.08, zeta2=0
     c_globalM = alfa*m_globalM + beta*k_globalM
     return c_globalM
 
-
-
 #SOLUÇÃO
 
 #Function to reduce matrices
@@ -1017,8 +1016,8 @@ fsy, fsu = FS(u_global, vpe, material, t_VM, tensoes_N)                         
 #print("tensões:\n",tensoes_N)
 #print("tensões membrana:\n",tensoes_memb)
 #print("t_VM:\n",t_VM)
-print("fsy:\n",fsy)
-print("fsu:\n",fsu)
+#print("fsy:\n",fsy)
+#print("fsu:\n",fsu)
 
 #ANÁLISE MODAL
 #MATRIZ M
@@ -1080,7 +1079,6 @@ geometry_photo = "Geometry.png"
 stress_sd_photo = "Stress-SD.png"   #Photo Name
 stress_sd_graph = "Stress-SD"       #Graph Title
 stress_sd_file = "Stress-SD.txt"    #File Name
-# Matrix of sigma_sd
 stress_vect_sd= tensoes_N[:,0]
 stress_matrix_sd = np.tile(stress_vect_sd, (1, rev_points)).reshape(len(stress_vect_sd), -1)
 
@@ -1088,7 +1086,6 @@ stress_matrix_sd = np.tile(stress_vect_sd, (1, rev_points)).reshape(len(stress_v
 stress_td_photo = "Stress-TD.png"   #Photo Name
 stress_td_graph = "Stress-TD"       #Graph Title
 stress_td_file = "Stress-TD.txt"    #File Name
-# Matrix of sigma_td (Verificar que métrica é!!!) 
 stress_vect_td= tensoes_N[:,1]
 stress_matrix_td = np.tile(stress_vect_td, (1, rev_points)).reshape(len(stress_vect_td), -1)
 
@@ -1096,7 +1093,6 @@ stress_matrix_td = np.tile(stress_vect_td, (1, rev_points)).reshape(len(stress_v
 stress_sf_photo = "Stress-SF.png"   #Photo Name
 stress_sf_graph = "Stress-SF"       #Graph Title
 stress_sf_file = "Stress-SF.txt"    #File Name
-# Matrix of sigma_td (Verificar que métrica é!!!) 
 stress_vect_sf= tensoes_N[:,2]
 stress_matrix_sf = np.tile(stress_vect_sf, (1, rev_points)).reshape(len(stress_vect_sf), -1)
 
@@ -1104,7 +1100,6 @@ stress_matrix_sf = np.tile(stress_vect_sf, (1, rev_points)).reshape(len(stress_v
 stress_tf_photo = "Stress-TF.png"   #Photo Name
 stress_tf_graph = "Stress-TF"       #Graph Title
 stress_tf_file = "Stress-TF.txt"    #File Name
-# Matrix of sigma_td (Verificar que métrica é!!!) 
 stress_vect_tf= tensoes_N[:,3]
 stress_matrix_tf = np.tile(stress_vect_tf, (1, rev_points)).reshape(len(stress_vect_tf), -1)
 
@@ -1492,14 +1487,14 @@ def tecplot_exporter(file_name, divisions, mesh, u_global, strains, tensoes_N, t
     with open(file_path, 'w') as file:
         file.write("TITLE = \"Shell\"\n")
         #file.write("VARIABLES = x, y, z, v, w, theta, es, et, xs, xt, ssd, std, ssf, stf, VM_d, VM_f, fsy, fsu\n")
-        file.write("VARIABLES = x, y, z, v, w, theta, es, et, xs, xt, ssd, std, ssf, stf, ss_memb, st_memb, VM_d, VM_f,  fsy\n")
+        file.write("VARIABLES = x, y, z, v, w, theta, es, et, xs, xt, ssd, std, ssf, stf, ss_memb, st_memb, VM_d, VM_f,  fsy, fsu\n")
         file.write(f"ZONE T=\"undeformed\", I={n_nodes:04d} J={divisions:04d}\n")
 
         for i in range(0, divisions):
             for j in range(0, n_nodes):
                 #print(f'{x[j,i]}  {y[j,i]}  {mesh[j,0]}  {strains[j,1]}')
                 #file.write(f'{x[j,i]:.7e}  {y[j,i]:.7e}  {mesh[j,0]:.7e}  {u_global[3*j,0]:.7e}  {u_global[3*j+1,0]:.7e}  {u_global[3*j+2,0]:.7e}  {strains[j,0]:.7e}  {strains[j,1]:.7e}  {strains[j,2]:.7e}  {strains[j,3]:.7e}  {tensoes_N[j,0]:.7e}  {tensoes_N[j,1]:.7e}  {tensoes_N[j,2]:.7e}  {tensoes_N[j,3]:.7e}  {t_VM[j,0]:.7e}  {t_VM[j,1]:.7e}  {fsy[j]:.7e}  {fsu[j]:.7e}\n')
-                file.write(f'{x[j,i]:.7e}  {y[j,i]:.7e}  {mesh[j,0]:.7e}  {u_global[3*j,0]:.7e}  {u_global[3*j+1,0]:.7e}  {u_global[3*j+2,0]:.7e}  {strains[j,0]:.7e}  {strains[j,1]:.7e}  {strains[j,2]:.7e}  {strains[j,3]:.7e}  {tensoes_N[j,0]:.7e}  {tensoes_N[j,1]:.7e}  {tensoes_N[j,2]:.7e}  {tensoes_N[j,3]:.7e}  {tensoes_memb[j,0]:.7e}  {tensoes_memb[j,1]:.7e}  {t_VM[j,0]:.7e}  {t_VM[j,1]:.7e}  {fsy[j]:.7e}\n')
+                file.write(f'{x[j,i]:.7e}  {y[j,i]:.7e}  {mesh[j,0]:.7e}  {u_global[3*j,0]:.7e}  {u_global[3*j+1,0]:.7e}  {u_global[3*j+2,0]:.7e}  {strains[j,0]:.7e}  {strains[j,1]:.7e}  {strains[j,2]:.7e}  {strains[j,3]:.7e}  {tensoes_N[j,0]:.7e}  {tensoes_N[j,1]:.7e}  {tensoes_N[j,2]:.7e}  {tensoes_N[j,3]:.7e}  {tensoes_memb[j,0]:.7e}  {tensoes_memb[j,1]:.7e}  {t_VM[j,0]:.7e}  {t_VM[j,1]:.7e}  {fsy[j]:.7e}  {fsu[j]:.7e}\n')
 
 def nat_freqs(natural_frequencies,main_folder,metric_folder,file_name,show, analysis_folder):
     

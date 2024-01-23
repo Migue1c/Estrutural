@@ -347,8 +347,17 @@ def Mesh_Properties():
     
     #print(material)
     #print(vpe)
+
+     ################### Static - Loading
+    loading = df['Loading'].to_numpy().reshape(-1)
+    static_pressure = np.zeros(len(vpe)) # Builds a array filled with zeros with the length of the number of elements
     
-    return mesh, u_DOF, vpe, material, pressure_nodes, t_col, p_col
+    for i in range(0, len(vpe)):
+        static_pressure[i] = (loading[i+1] + loading[i]) / 2 # The pressure aplied in the element is the average of the nodal values
+    #print(static_pressure)
+
+    
+    return mesh, u_DOF, vpe, material, pressure_nodes, t_col, p_col, static_pressure
 
 #PARTE ALFAGEM
 #ESTÁTICA
@@ -577,7 +586,6 @@ def loading(ne: int, vpe, pressure) -> None:  # To be verified
         phi = vpe[i, 1]
         ri = vpe[i, 0]
         hi = vpe[i, 2]
-        p = pressure[i] * (10**5)
         #print(phi, ri, hi, p)
         v_carr = np.zeros(6)
         A11 = 0.5 * ri * (-np.sin(phi)) - (3 / 20) * np.sin(phi) ** 2 * hi
@@ -969,7 +977,7 @@ press_max_est = np.max(pressure_nodes)
 
 
 #LEITURA DO FICHEIRO
-mesh, u_DOF, vpe, material, pressure_nodes, t_col, P_col = Mesh_Properties()
+mesh, u_DOF, vpe, material, pressure_nodes, t_col, P_col, static_pressure = Mesh_Properties()
 
 #ANÁLISE ESTÁTICAs
 #MATRIZ K
@@ -978,7 +986,7 @@ k = k_global(len(vpe), vpe, material)                       #calculo matriz K
 #k_df.to_excel('k.xlsx', index=False)                        #guardar DF no excel
 
 #CARREGAMENTO
-medium_p = medium_pressure(pressure_nodes, len(vpe))                                        #calcular pressão média
+medium_p = static_pressure                                                                  # vetor com a pressão média dos nós, respetiva à pressão nos elementos
 carr = loading(len(vpe), vpe, medium_p)                                                     #calcular vetor de carregamento (como array 1D)
 f_vect = np.reshape(carr,(-1,1))                                                            #converter carr para um vetor (array 2D)
 #print("vetor carregamento:\n",f_vect)                   

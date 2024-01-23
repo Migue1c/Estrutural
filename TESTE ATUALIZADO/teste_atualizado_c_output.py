@@ -350,14 +350,6 @@ def Mesh_Properties():
     
     return mesh, u_DOF, vpe, material, pressure_nodes, t_col, p_col
 
-"""
-#Graphic of the points
-df.plot(x='r', y='z', marker='o', linestyle='-', color='k', label='Nós')
-plt.gca().invert_yaxis()
-plt.legend(loc='center left')
-plt.show()
-"""
-
 #PARTE ALFAGEM
 #ESTÁTICA
 def Bi(s1:float, index:int, r:float, vpe) -> np.ndarray:
@@ -468,10 +460,10 @@ def k_global(ne:int, vpe, mat, ni=1200, sparse=False) -> np.ndarray:
 
     #print(sparse)
  
+#POS-PROCESSAMENTO
 def calculate_strains_stresses(displacements, vpe, mat):
     num_nodes = int(len(displacements)/3)
     num_elements = len(vpe)
-
 
     strains = np.zeros((num_nodes, 4))  # Matriz para armazenar as deformações de cada nó (epsilon_s, epsilon_theta, chi_s, chi_theta)
     for i in range(num_elements):
@@ -539,7 +531,10 @@ def FS(displacements, vpe, mat, VM, tensões_N):     #FSy - deformação plastic
     FSy = np.empty((ne+1))
     FSU = np.empty((ne+1))
     for i in range(ne):
-        FSy[i] = mat[3 ,int(vpe[i,4])-1]/von_mises[i]    
+        if von_mises[i] == 0:
+            FSy[i] = 10
+        else:
+            FSy[i] = mat[3, int(vpe[i, 4]) - 1] / von_mises[i]  
         FSc = 10**6
         FSt = FSc
         if np.any(tensões_N[i,:] < 0):
@@ -565,6 +560,7 @@ def FS(displacements, vpe, mat, VM, tensões_N):     #FSy - deformação plastic
 6-Shear Strength [MPa]
 '''
 
+#QUITÉRIO
 #CARREGAMENTO
 
 def medium_pressure(pressao, ne):
@@ -591,39 +587,116 @@ def loading(ne: int, vpe, pressure) -> None:  # To be verified
         A15 = 0.5 * ri * np.cos(phi) + (7 / 20) * hi * np.sin(phi) * np.cos(phi)
         A16 = hi * (-(1 / 12) * ri - (1 / 20) * hi * np.sin(phi))
         v_carr = 2*np.pi*hi*p*np.array([A11, A12, A13, A14, A15, A16])
-        #print(v_carr)
-        #ef_press = np.array([0, pressure[i]])
-        #s1 = lambda s: (s + 1) / 2
-        #r = lambda s: ri + s1(s) * hi * np.sin(phi)
-        #integrand = lambda s: ef_press.dot(Pmatrix(s1(s), i, phi)) * (r(s))
-        #I = np.empty((1, 6, 200), dtype=float)
-        #for j, s in enumerate(np.linspace(-1, 1, 200)):
-           # I[:, :, j] = integrand(s)
-        #integral = 2 * np.pi * h * sp.integrate.simpson(I, x=None, dx=h / 199, axis=-1)
-        #print(integral)
-        #integral = 0.347854845 * integrand(-0.861136312) + 0.652145155 * integrand(-0.339981044) + 0.652145155 * integrand(0.339981044) + 0.347854845 * integrand(0.861136312)
+        
         load_vct[3 * i:3 * i + 6] = load_vct[3 * i:3 * i + 6] + v_carr
-    #print(load for load in load_vct)
-    #print(load_vct.shape)
-    #print(load_vct)
+
     return load_vct
 
-def Carr_t(loading,t,t_col,P_col):
-    P_col = P_col * (10**5)
-    press_max = np.amax(P_col)
-    p_col_adim = np.zeros(np.size(P_col))
-    p_col_adim = P_col/press_max
-    P_t = np.interp(t,t_col,p_col_adim)
-    loading=loading*P_t
-    #print(loading)
+def func_carr_t (funcoes, A, B, w, b, t_final, pi, util, t_col, p_col):
+    if util[0] == 1:
+        n = np.size(funcoes)
+        dt = 0.01
+        T = np.arange(0, seg_max, dt)
+        seg_max = np.max(t_final)
+        #print(t)
+        #print(np.size(t))
+        P = np.zeros(np.size(T))
+        P[0]=pi[0]
+        for i in range(0,n):
+            if funcoes[i] == 1:
+                A1 = A[0]      #ler do excel
+                B1 = B[0]
+                w1 = w[0]
+                b1 = b[0]
+                first_zero_index1 = np.where(P == 0)[0][0] if (P == 0).any() else None
+                t1 = t_final[0] - dt*first_zero_index1
+                t_sin = np.arange(0, t1, dt)
+                t_iter1 = np.size(t_sin)
+                last_index1 = first_zero_index1 + t_iter1
+
+                #print(t[first_zero_index1:last_index1])
+                P_1 = np.zeros(t_iter1)
+                for i in range (0,t_iter1):
+                    t_1 = t_sin[i]
+                    P_1[i] = A1*np.sin(w1*t_1+b1) + P[first_zero_index1-1] - A1*np.sin(w1*t_sin[0]+b1)
+                #print(t_sin)
+                P[first_zero_index1:last_index1] = P_1
+
+
+            elif funcoes[i] == 2:
+                A2 = A[1]
+                B2 = B[1]
+                first_zero_index2 = np.where(P == 0)[0][0] if (P == 0).any() else None
+                t2 = t_final[1] - first_zero_index2*dt
+                t_exp = np.arange(0, t2, dt)
+                t_iter2 = np.size(t_exp)
+                last_index2 = first_zero_index2 + t_iter2
+                #print(t[first_zero_index2:last_index2])
+                P_2 = np.zeros(t_iter2)
+                for i in range (0, t_iter2):
+                    t_2 = t_exp[i]
+                    P_2[i] = A2*np.exp(B2*t_2) * P[first_zero_index2-1]
+                #print(t_2)
+                P[first_zero_index2:last_index2] = P_2
+
+
+            elif funcoes[i] == 3:
+                A3 = A[2]
+                first_zero_index3 = np.where(P == 0)[0][0] if (P == 0).any() else None
+                t3 = t_final[2] - first_zero_index3 * dt
+                t_lin = np.arange(0, t3, dt)
+                t_iter3 = np.size(t_lin)
+                last_index3 = first_zero_index3 + t_iter3
+                #print(t[first_zero_index3:last_index3])
+                P_3 = np.zeros(t_iter3)
+                for i in range(0, t_iter3):
+                    t_3 = t_lin[i]
+                    P_3[i] = A3*t_3 + P[first_zero_index3-1]
+
+                P[first_zero_index3:last_index3] = P_3
+
+            elif funcoes[i] == 4:
+                first_zero_index4 = np.where(P == 0)[0][0] if (P == 0).any() else None
+                t4 = t_final[3] - first_zero_index4 * dt
+                #print(t4)
+                t_cst = np.arange(0, t4, dt)
+                t_iter4 = np.size(t_cst)
+                last_index4 = first_zero_index4 + t_iter4
+                P_4 = np.zeros(t_iter4)
+                for i in range(0, t_iter4):
+                    P_4[i] = P[first_zero_index4-1]
+                #print(P_4)
+                P[first_zero_index4:last_index4] = P_4
+    elif util[0] == 0:
+        T = t_col
+        P = p_col
+    return P, T
+
+def Carr_t(loading, t, T, P, press_max_est):
+
+    p_col_adim = np.zeros(np.size(P))
+    p_col_adim = P/press_max_est
+    print(np.max(p_col_adim))
+    P_t_adim = np.interp(t,T,p_col_adim)
+
+    loading = loading * P_t_adim
+    print(loading)
     return loading
 
+def load_p(vpe, ne, P, pressure_nodes):
+    max = np.amax(pressure_nodes)
+    for i in range (0,ne):
+        pressure_nodes = pressure_nodes / max * P
+
+    
+
+#BOMBAS
 #MODAL
 
 def Mestacked(ne:int, vpe, mat, ni:int, simpson=True) -> np.ndarray:
     mes = np.empty((6,6,ne), dtype=float)
     for i in range(0, ne):
-        rho = mat[int(vpe[i, 4])-1, 0] # Specific mass for the material in the i-th element
+        rho = mat[0 , int(vpe[i, 4])-1,] # Specific mass for the material in the i-th element
         t = vpe[i,3]
         h = vpe[i, 2]
         phi = vpe[i, 1]
@@ -673,10 +746,11 @@ def m_global(ne:int, vpe, mat, ni=1200, sparse=False) -> np.ndarray:
         ModalSolver(k_global,m_global, u_DOF)
     output = np.array[eig_vals,eig_vect]
 
-def modal(eig_vals):
-    natfreq = (np.sqrt(eig_vals)[0:2])/(2*np.pi)
-    return natfreq[0], natfreq[1]
+#def modal(eig_vals):
+    natfreq = np.sort(np.sqrt(eig_vals))
+    return natfreq
 
+#ESTEVES
 #DINÂMICA
 
 def c_global(k_globalM, m_globalM, mode1:float, mode2:float, zeta1=0.08, zeta2=0.08):
@@ -688,6 +762,7 @@ def c_global(k_globalM, m_globalM, mode1:float, mode2:float, zeta1=0.08, zeta2=0
 
     c_globalM = alfa*m_globalM + beta*k_globalM
     return c_globalM
+
 
 #SOLUÇÃO
 
@@ -759,15 +834,16 @@ def ModalSolver(k:np.ndarray, m:np.ndarray, u_DOF:np.ndarray):
     eig_vals, eig_vect = sp.linalg.eig(k_red, m_red)
 
     #filter the results
-    eig_vals = np.reshape(eig_vals,(-1,1))
     
+    eig_vals = np.copy(eig_vals.reshape((-1,1)))
+    eig_vals = np.asarray(eig_vals,dtype=float)
+
     i=int(len(eig_vals)-1)
     while i>=0:
-        if eig_vals[i,0] <= 0:
-            eig_vals = np.delete(eig_vals, i, axis=0)
+        if eig_vals[i] <= 0:
+            eig_vals = np.delete(eig_vals, i)
             eig_vect = np.delete(eig_vect, i, axis=1)
         i -= 1  
-    eig_vals = np.array(eig_vals,dtype=float)
     #print("lenght valores proprios:",len(eig_vals))
     #print("lenght vetores proprios:",np.shape(eig_vect)[1])
     #print(eig_vals)
@@ -775,7 +851,20 @@ def ModalSolver(k:np.ndarray, m:np.ndarray, u_DOF:np.ndarray):
     #re-add zeros to the eigenvectors matrix
     eig_vect = RdfMatrix(eig_vect, u_DOF)
 
-    return eig_vals, eig_vect
+
+    guide_vect = np.argsort(eig_vals)
+    natfreq = np.sort(np.sqrt(eig_vals))
+
+    new_mtx = np.zeros((len(eig_vect),len(guide_vect)))
+    
+    n=0
+    for i in guide_vect:
+        new_mtx[:,n] = eig_vect[:,i]
+        n += 1
+    
+    eig_vect = new_mtx
+
+    return natfreq, eig_vect
 
 #Dinamic Solution:
 def DinamicSolver(m:np.ndarray, c:np.ndarray, k:np.ndarray, f:np.ndarray, x_0:np.ndarray, x_0_d:np.ndarray, u_DOF:np.ndarray, tk:float, delta_t:float, t_final:float, loading, t_col, P_col):
@@ -786,7 +875,7 @@ def DinamicSolver(m:np.ndarray, c:np.ndarray, k:np.ndarray, f:np.ndarray, x_0:np
     global matrix_ud2   
 
     #Starting value for the force vector
-    f = Carr_t(loading, tk, t_col, P_col)
+    #f = Carr_t(loading, tk, t_col, P_col)
 
     #Reduce Matrices
     k = RedMatrix(k, u_DOF)
@@ -822,7 +911,7 @@ def DinamicSolver(m:np.ndarray, c:np.ndarray, k:np.ndarray, f:np.ndarray, x_0:np
     while tk < t_final :
         
         #Force vector for current tk
-        f = Carr_t(loading, tk, t_col, P_col)
+        #f = Carr_t(loading, tk, t_col, P_col)
         f = RedMatrix(f, u_DOF)
 
         #Starting value [x_d2_(0)]
@@ -858,6 +947,22 @@ def DinamicSolver(m:np.ndarray, c:np.ndarray, k:np.ndarray, f:np.ndarray, x_0:np
     matrix_ud2 = RdfMatrix(matrix_ud2, u_DOF)
 
 
+
+'''
+seg_max = np.max(t_final)
+
+    if util[0] == 1:
+        P = func_carr_t(funcoes, A, B, w, b, t_final, pi, seg_max)[0]
+        T = func_carr_t(funcoes, A, B, w, b, t_final, pi, seg_max)[1]
+    elif util[0] == 0:
+        P = ler pelo olim
+        T = ""
+    
+#carregamento Dinamico
+press_max_est = np.max(pressure_nodes)
+'''
+
+
 #############################################################################################################################################
 #############################################################################################################################################
 #############################################################################################################################################
@@ -873,22 +978,23 @@ k = k_global(len(vpe), vpe, material)                       #calculo matriz K
 #k_df.to_excel('k.xlsx', index=False)                        #guardar DF no excel
 
 #CARREGAMENTO
-medium_p = medium_pressure(pressure_nodes, len(vpe))        #calcular pressão média
-carr = loading(len(vpe), vpe, medium_p)                     #calcular vetor de carregamento (como array 1D)
-f_vect = np.reshape(carr,(-1,1))                            #converter carr para um vetor (array 2D)
+medium_p = medium_pressure(pressure_nodes, len(vpe))                                        #calcular pressão média
+carr = loading(len(vpe), vpe, medium_p)                                                     #calcular vetor de carregamento (como array 1D)
+f_vect = np.reshape(carr,(-1,1))                                                            #converter carr para um vetor (array 2D)
 #print("vetor carregamento:\n",f_vect)                   
 
 #SOLUÇÃO E POS-PROCESSAMENTO ESTÁTICA
-u_global = StaticSolver(k, f_vect, u_DOF)                   #calculo dos deslocamentos
+u_global = StaticSolver(k, f_vect, u_DOF)                                                   #calculo dos deslocamentos
 #print("vetor deslocamentos:\n",u_global)               
-strains, tensoes_N, tensoes_memb = calculate_strains_stresses(u_global, vpe, material)    #calculo das extensões e tensões diretas (e_s, e_th, x_s, x_th)
-t_VM = tensões_VM(u_global, vpe, tensoes_N)                 #calculo das tensões de von-misses (t_s_d, t_th_d, t_s_f, t_th_f)
-fsy, fsu = FS(u_global, vpe, material, t_VM, tensoes_N)     #calculo dos fatores de segurança (fsy-cedencia, fsu-rutura)
-#print("strains:\n",strains)
+strains, tensoes_N, tensoes_memb = calculate_strains_stresses(u_global, vpe, material)      #calculo das extensões e tensões diretas (e_s, e_th, x_s, x_th)
+t_VM = tensões_VM(u_global, vpe, tensoes_N)                                                 #calculo das tensões de von-misses (t_s_d, t_th_d, t_s_f, t_th_f)
+fsy, fsu = FS(u_global, vpe, material, t_VM, tensoes_N)                                     #calculo dos fatores de segurança (fsy-cedencia, fsu-rutura)
+#print("strains:\n",strains)    
 #print("tensões:\n",tensoes_N)
+#print("tensões membrana:\n",tensoes_memb)
 #print("t_VM:\n",t_VM)
-#print("fsy:\n",fsy)
-#print("fsu:\n",fsu)
+print("fsy:\n",fsy)
+print("fsu:\n",fsu)
 
 #ANÁLISE MODAL
 #MATRIZ M
@@ -898,9 +1004,8 @@ m_gl = m_global(len(vpe), vpe, material, ni=1200, sparse=False)#calculo matriz M
 #print(m)
 
 #SOLUÇÃO E POS-PROCESSAMENTO MODAL
-eig_vals, eig_vect = ModalSolver(k, m_gl, u_DOF)               #calculo valores e vetores próprios
-natfreq1, natfreq2 = modal(eig_vals)                        #calculo das frequências naturais para amortecimento
-#print("valores proprios:\n",eig_vals)                      
+natfreq, eig_vect = ModalSolver(k, m_gl, u_DOF)               #calculo valores e vetores próprios
+#print("valores proprios:\n",natfreq)                      
 #print("vetores proprios:\n",eig_vect)                   
 #print("freq. natural 1:\n",natfreq1)
 #print("freq. natural 2:\n",natfreq2)
@@ -908,7 +1013,7 @@ natfreq1, natfreq2 = modal(eig_vals)                        #calculo das frequê
 
 #ANÁLISE DINÂMICA
 #MATRIZ C
-c = c_global(k, m_gl, natfreq1, natfreq2)                      #calculo matriz C
+c = c_global(k, m_gl, natfreq[0], natfreq[1])                   #calculo matriz C
 c_df = pd.DataFrame(c)                                      #converter pra dataframe
 c_df.to_excel('c.xlsx', index=False)                        #guardar DF no excel
 #print(c)
@@ -927,7 +1032,7 @@ print()
 ti_output = time.time()
 
 #Slice angle to be poltted
-rev_degrees = 180
+rev_degrees = 360
 rev_points = 250 
 
 #Folder Names
@@ -1342,7 +1447,7 @@ def files (file_name, metric_vect, main_folder, metric_folder,analysis_folder,po
             formatted_point = "{:.3f}".format(point)  # Formata o ponto para ter no máximo 3 casas decimais
             file.write(f'{formatted_point} {metric_value}\n')
 
-def tecplot_exporter(file_name, divisions, mesh, u_global, strains, tensoes_N, t_VM, fsy, fsu):
+def tecplot_exporter(file_name, divisions, mesh, u_global, strains, tensoes_N, tensoes_memb, t_VM, fsy, fsu):
     
     main_folder = "FEM Analysis - Data"
     static_folder = 'Static Analysis'
@@ -1362,44 +1467,57 @@ def tecplot_exporter(file_name, divisions, mesh, u_global, strains, tensoes_N, t
     #Write file inside the folder
     with open(file_path, 'w') as file:
         file.write("TITLE = \"Shell\"\n")
-        file.write("VARIABLES = x, y, z, v, w, theta, es, et, xs, xt, ssd, std, ssf, stf, VM_d, VM_f, fsy, fsu\n")
+        #file.write("VARIABLES = x, y, z, v, w, theta, es, et, xs, xt, ssd, std, ssf, stf, VM_d, VM_f, fsy, fsu\n")
+        file.write("VARIABLES = x, y, z, v, w, theta, es, et, xs, xt, ssd, std, ssf, stf, ss_memb, st_memb, VM_d, VM_f,  fsy\n")
         file.write(f"ZONE T=\"undeformed\", I={n_nodes:04d} J={divisions:04d}\n")
 
         for i in range(0, divisions):
             for j in range(0, n_nodes):
                 #print(f'{x[j,i]}  {y[j,i]}  {mesh[j,0]}  {strains[j,1]}')
-                file.write(f'{x[j,i]:.7e}  {y[j,i]:.7e}  {mesh[j,0]:.7e}  {u_global[3*j,0]:.7e}  {u_global[3*j+1,0]:.7e}  {u_global[3*j+2,0]:.7e}  {strains[j,0]:.7e}  {strains[j,1]:.7e}  {strains[j,2]:.7e}  {strains[j,3]:.7e}  {tensoes_N[j,0]:.7e}  {tensoes_N[j,1]:.7e}  {tensoes_N[j,2]:.7e}  {tensoes_N[j,3]:.7e}  {t_VM[j,0]:.7e}  {t_VM[j,1]:.7e}  {fsy[j]:.7e}  {fsu[j]:.7e}\n')
+                #file.write(f'{x[j,i]:.7e}  {y[j,i]:.7e}  {mesh[j,0]:.7e}  {u_global[3*j,0]:.7e}  {u_global[3*j+1,0]:.7e}  {u_global[3*j+2,0]:.7e}  {strains[j,0]:.7e}  {strains[j,1]:.7e}  {strains[j,2]:.7e}  {strains[j,3]:.7e}  {tensoes_N[j,0]:.7e}  {tensoes_N[j,1]:.7e}  {tensoes_N[j,2]:.7e}  {tensoes_N[j,3]:.7e}  {t_VM[j,0]:.7e}  {t_VM[j,1]:.7e}  {fsy[j]:.7e}  {fsu[j]:.7e}\n')
+                file.write(f'{x[j,i]:.7e}  {y[j,i]:.7e}  {mesh[j,0]:.7e}  {u_global[3*j,0]:.7e}  {u_global[3*j+1,0]:.7e}  {u_global[3*j+2,0]:.7e}  {strains[j,0]:.7e}  {strains[j,1]:.7e}  {strains[j,2]:.7e}  {strains[j,3]:.7e}  {tensoes_N[j,0]:.7e}  {tensoes_N[j,1]:.7e}  {tensoes_N[j,2]:.7e}  {tensoes_N[j,3]:.7e}  {tensoes_memb[j,0]:.7e}  {tensoes_memb[j,1]:.7e}  {t_VM[j,0]:.7e}  {t_VM[j,1]:.7e}  {fsy[j]:.7e}\n')
 
 def nat_freqs(natural_frequencies,main_folder,metric_folder,file_name,show, analysis_folder):
     
-    modes_number = len(natural_frequencies)  # Set the size of the sequence
+    modes_graph = 10
+
+    modes_number = len(natural_frequencies)
     modes = [i + 1 for i in range(modes_number)]
 
-    file_path = os.path.join(main_folder,analysis_folder, metric_folder, file_name)
-    # Writing data to a text file
-    with open(file_path, 'w') as file:
-        file.write("Natural_frequencies\n")
-        for z, freq in zip(modes, eig_vals):
-            file.write(f"{freq}\n") 
+    # File path for saving all modes
+    all_modes_file_path = os.path.join(main_folder, analysis_folder, metric_folder, file_name)
     
+    # Writing data to a text file (all modes)
+    with open(all_modes_file_path, 'w') as file:
+        file.write("Natural_frequencies\n")
+        for z, freq in zip(modes, natural_frequencies):
+            file.write(f"{freq}\n")
+
+    # Selecting only the specified number of modes for the plot
+    modes_to_show = modes[:modes_graph]
+    frequencies_to_show = natural_frequencies[:modes_graph]
+
+    # File path for saving the plot with selected modes
+    plot_path = os.path.join(main_folder, analysis_folder, metric_folder, "natural_frequencies_graph.png")
+
     plt.figure()
-    plt.plot(modes, natural_frequencies, marker='o', markersize="5" ,linestyle='', color='b')
+    plt.plot(modes_to_show, frequencies_to_show, marker='o', markersize="5", linestyle='', color='b')
     plt.xlabel('Vibration Mode')
     plt.ylabel('Natural Frequency')
     plt.title('Natural Frequencies Graph')
     plt.grid(True)
 
     # Adding labels with coordinates (modes, natural frequency)
-    for mode, freq in zip(modes, natural_frequencies):
-        plt.text(mode, float(freq), f'{float(freq):.2f}', fontsize=8, ha='center', va='bottom', color='black')
+    for mode, freq in zip(modes_to_show, frequencies_to_show):
+        plt.text(mode, float(freq), f'{float(freq):.5f}', fontsize=8, ha='center', va='bottom', color='black')
 
-
-    # Full path to save the plot inside the folder
-    plot_path = os.path.join(main_folder,analysis_folder,natfreqs_folder, "natural_frequencies_graph.png")
-    # Save the plot inside the folder
+    # Save the plot
     plt.savefig(plot_path)
-    if show ==1:
+
+    # Show the plot if requested
+    if show == 1:
         plt.show()
+
     plt.close()
 
 ###################################################################################
@@ -1419,7 +1537,7 @@ folders_creator(main_folder,stress_folder,strain_folder,natfreqs_folder,static_f
 geometry_plot(mesh,rev_degrees,main_folder,geometry_photo, show)
 
 #Tecplot data exporter for 3D
-tecplot_exporter('output_export_tecplot_3d.txt', rev_points, mesh, u_global, strains, tensoes_N, t_VM, fsy, fsu)
+tecplot_exporter('output_export_tecplot_3d.txt', rev_points, mesh, u_global, strains, tensoes_N, tensoes_memb, t_VM, fsy, fsu)
 
 #Graphs
 
@@ -1473,7 +1591,7 @@ files (safety_fsy_file, safety_vect_fsy, main_folder, safety_folder,static_folde
 files(safety_fsu_file,safety_vect_fsu,main_folder,safety_folder,static_folder,mesh)
 
 #Natural Frequencies 
-nat_freqs (eig_vals, main_folder, natfreqs_folder, natfreqs_file,show,modal_folder)
+nat_freqs (natfreq, main_folder, natfreqs_folder, natfreqs_file,show,modal_folder)
  
 #Time calculation
 tf_output = time.time()

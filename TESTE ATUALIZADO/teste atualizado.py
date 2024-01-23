@@ -1009,18 +1009,12 @@ def DinamicSolver(m:np.ndarray, c:np.ndarray, k:np.ndarray, f:np.ndarray, u_DOF:
 
 
 #LEITURA DO FICHEIRO
-mesh, u_DOF, vpe, material, pressure_nodes, t_col, P_col, static_pressure = Mesh_Properties()
-
+mesh, u_DOF, vpe, material, pressure_nodes, t_col, p_col, f_vect = Mesh_Properties()
 #ANÁLISE ESTÁTICAs
 #MATRIZ K
 k = k_global(len(vpe), vpe, material)                       #calculo matriz K
 #k_df = pd.DataFrame(k)                                     #converter pra dataframe
 #k_df.to_excel('k.xlsx', index=False)                       #guardar DF no excel
-
-#CARREGAMENTO
-carr = loading(len(vpe), vpe, static_pressure)              #calcular vetor de carregamento (como array 1D)
-f_vect = np.reshape(carr,(-1,1))                            #converter carr para um vetor (array 2D)
-#print("vetor carregamento:\n",f_vect)                   
 
 #SOLUÇÃO E POS-PROCESSAMENTO ESTÁTICA
 u_global = StaticSolver(k, f_vect, u_DOF)                   #calculo dos deslocamentos

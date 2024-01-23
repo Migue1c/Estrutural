@@ -577,10 +577,10 @@ def FS(displacements, vpe, mat, VM, tensões_N):     #FSy - deformação plastic
     FSU = np.empty((ne+1))
     for i in range(ne):
         if von_mises[i] == 0:
-            FSy[i] = 10
+            FSy[i] = 2
         else:
             FSy[i] = mat[3, int(vpe[i, 4]) - 1] / von_mises[i]  
-        FSc = 10
+        FSc = 2
         FSt = FSc
         
         if np.any(tensões_N[i,:] < 0):
@@ -598,10 +598,10 @@ def FS(displacements, vpe, mat, VM, tensões_N):     #FSy - deformação plastic
             FSU[i] = FSc
             #print(FSc)
     if von_mises[i+1] == 0:
-        FSy[i+1] = 10
+        FSy[i+1] = 2
     else:
         FSy[i+1] = mat[3, int(vpe[i, 4]) - 1] / von_mises[i+1]  
-    FSc = 10
+    FSc = 2
     FSt = FSc
     if np.any(tensões_N[i+1,:] < 0):
         FSc = mat[5, int(vpe[i,4])-1] / np.min(tensões_N[i+1,:])

@@ -1002,8 +1002,8 @@ natfreq, eig_vect = ModalSolver(k, m_gl, u_DOF)               #calculo valores e
 #ANÁLISE DINÂMICA
 #MATRIZ C
 c = c_global(k, m_gl, natfreq[0], natfreq[1])                   #calculo matriz C
-c_df = pd.DataFrame(c)                                      #converter pra dataframe
-c_df.to_excel('c.xlsx', index=False)                        #guardar DF no excel
+#c_df = pd.DataFrame(c)                                      #converter pra dataframe
+#c_df.to_excel('c.xlsx', index=False)                        #guardar DF no excel
 #print(c)
 
 #DinamicSolver(m:np.ndarray, c:np.ndarray, k:np.ndarray, f:np.ndarray, x_0:np.ndarray, x_0_d:np.ndarray, u_DOF:np.ndarray, tk:float, delta_t:float, t_final:float, loading, t_col, P_col)

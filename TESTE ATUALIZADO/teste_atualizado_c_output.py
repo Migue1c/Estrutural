@@ -31,8 +31,9 @@ def Mesh_Properties():
     matcols     = list(range(3, 3 + m))
     
     # Number of lines to read, for the loading
-    df_loading_read = pd.read_excel('Livro1.xlsx', sheet_name = 'Loading', usecols = ['NumRowsRead'], nrows = 1)
-    k2              = int(df_loading_read.loc[0, 'NumRowsRead'])
+    df_loading_read = pd.read_excel('Livro1.xlsx', sheet_name = 'Loading', usecols = ['READ'], nrows = 1)
+    k2              = int(df_loading_read.loc[0, 'READ'])
+    
 
     # Reading the Input Data / Creating DataFrames
     df_read     = ['Points','z','r','thi','Conditions','Material','Conditions1','Nn', 'Loading', 'Discontinuity'] 
@@ -42,26 +43,25 @@ def Mesh_Properties():
 
     df_mat      = pd.read_excel('Livro1.xlsx', sheet_name = 'Materials', usecols = matcols, nrows = 7)
     
-    #print(df_mat)
+
     
-    df_loading  = ['t', 'p1']
-    df_loading  = pd.read_excel('Livro1.xlsx', sheet_name = 'Loading', usecols = df_loading, nrows = k2)
     
-    #print(df_loading)
     
-    # Loading matrix 
-    t_col = np.array(df_loading[['t']].values)  #column vector
-    #print(t_col)
     
-    p_col = np.array(df_loading[['p1']].values) #column vector
-    #print(p_col)
+   
+    
+    
+    
+    
+    
+    
     
     # Matrix with the properties of the materials
     material = np.array(df_mat.values)
     
     #print(material)
     
-    #print(df)
+  
 
 
     # Creates a DataFrame with the same columns, but with no values
@@ -150,7 +150,7 @@ def Mesh_Properties():
         #Normalizar o vetor        
         #Calcular o ponto e adicionar ao DataFrame
         
-    if 1==0: ################## A alterar, para variar com os dados inseridos no excel
+    if 1==1: ################## A alterar, para variar com os dados inseridos no excel
         i = 0
         while i < (len(df['Points'])):
             
@@ -227,13 +227,13 @@ def Mesh_Properties():
     df[columns_interpolate] = df[columns_interpolate].interpolate(method='linear')
     df.loc[len(df)-1, 'thi'] = np.nan 
     
-    if 1==1: ################## A alterar, para variar com os dados inseridos no excel
+    if 1==0: ################## A alterar, para variar com os dados inseridos no excel
         # Interpolation Linear Type
         columns_interpolate     = ['z', 'r']
         df[columns_interpolate] = df[columns_interpolate].interpolate(method='linear')
         df.loc[len(df)-1, 'thi'] = np.nan 
 
-    #print(df)
+    print(df)
 
 
     # Matriz com as coordenadas dos pontos / Malha
@@ -335,27 +335,65 @@ def Mesh_Properties():
 
     vpe = np.array(vpe.values)
 
-    '''
+    """
     #Graphic of the points
     df.plot(x='r', y='z', marker='o', linestyle='-', color='k', label='Nós')
     plt.gca().invert_yaxis()
     plt.legend(loc='center left')
     plt.show()
-    '''
+    """
     
     #print(material)
     #print(vpe)
+    
 
-     ################### Static - Loading
+    ################### Static - Loading
+    
     loading = df['Loading'].to_numpy().reshape(-1)
     static_pressure = np.zeros(len(vpe)) # Builds a array filled with zeros with the length of the number of elements
     
     for i in range(0, len(vpe)):
         static_pressure[i] = (loading[i+1] + loading[i]) / 2 # The pressure aplied in the element is the average of the nodal values
-    #print(static_pressure)
-
     
-    return mesh, u_DOF, vpe, material, pressure_nodes, t_col, p_col, static_pressure
+    load_vct = np.zeros(3 * (len(vpe) + 1))
+    for i in range(0, len(vpe)):
+        phi = vpe[i, 1]
+        ri = vpe[i, 0]
+        hi = vpe[i, 2]
+        p = static_pressure[i]
+        #print(phi, ri, hi, p)
+        v_carr = np.zeros(6)
+        A11 = 0.5 * ri * (-np.sin(phi)) - (3 / 20) * np.sin(phi) ** 2 * hi
+        A12 = 0.5 * ri * np.cos(phi) + (3 / 20) * np.sin(phi) * np.cos(phi) * hi
+        A13 = hi * ((1 / 12) * ri + (1 / 30) * hi * np.sin(phi))
+        A14 = 0.5 * ri * (-np.sin(phi)) - (7 / 20) * hi * np.sin(phi) ** 2
+        A15 = 0.5 * ri * np.cos(phi) + (7 / 20) * hi * np.sin(phi) * np.cos(phi)
+        A16 = hi * (-(1 / 12) * ri - (1 / 20) * hi * np.sin(phi))
+        v_carr = 2*np.pi*hi*p*np.array([A11, A12, A13, A14, A15, A16])
+        
+        load_vct[3 * i:3 * i + 6] = load_vct[3 * i:3 * i + 6] + v_carr
+
+    load_vct = np.reshape(load_vct,(-1,1))
+    print(load_vct)
+
+    f_vect = load_vct
+    
+    
+    
+    ############################### Dynamic - Loading
+    
+    loading_cols = ['t_col', 'PressureCol']
+    df_loading  = pd.read_excel('Livro1.xlsx', sheet_name = 'Loading', usecols = loading_cols, nrows = k2 )
+    #print(df_loading)
+    
+    t_col = np.array(df_loading[['t_col']].values)  #column vector
+    #print(t_col)
+    p_col = np.array(df_loading[['PressureCol']].values) #column vector
+    #print(p_col)
+    
+    
+    return mesh, u_DOF, vpe, material, pressure_nodes, t_col, p_col, f_vect
+
 
 #PARTE ALFAGEM
 #ESTÁTICA
@@ -592,27 +630,6 @@ def FS(displacements, vpe, mat, VM, tensões_N):     #FSy - deformação plastic
 
 #QUITÉRIO
 #CARREGAMENTO
-#vetor carregamento (mesh também)
-def loading(ne: int, vpe, pressure) -> None:  # To be verified
-    load_vct = np.zeros(3 * (ne + 1))
-    for i in range(0, ne):
-        phi = vpe[i, 1]
-        ri = vpe[i, 0]
-        hi = vpe[i, 2]
-        p = pressure[i]
-        #print(phi, ri, hi, p)
-        v_carr = np.zeros(6)
-        A11 = 0.5 * ri * (-np.sin(phi)) - (3 / 20) * np.sin(phi) ** 2 * hi
-        A12 = 0.5 * ri * np.cos(phi) + (3 / 20) * np.sin(phi) * np.cos(phi) * hi
-        A13 = hi * ((1 / 12) * ri + (1 / 30) * hi * np.sin(phi))
-        A14 = 0.5 * ri * (-np.sin(phi)) - (7 / 20) * hi * np.sin(phi) ** 2
-        A15 = 0.5 * ri * np.cos(phi) + (7 / 20) * hi * np.sin(phi) * np.cos(phi)
-        A16 = hi * (-(1 / 12) * ri - (1 / 20) * hi * np.sin(phi))
-        v_carr = 2*np.pi*hi*p*np.array([A11, A12, A13, A14, A15, A16])
-        
-        load_vct[3 * i:3 * i + 6] = load_vct[3 * i:3 * i + 6] + v_carr
-
-    return load_vct
 
 #carregamento dinâmico
 def func_carr_t (funcoes, A, B, w, b, t_final, pi, util, t_col, p_col):
@@ -993,7 +1010,7 @@ def DinamicSolver(m:np.ndarray, c:np.ndarray, k:np.ndarray, f:np.ndarray, u_DOF:
 
 
 #LEITURA DO FICHEIRO
-mesh, u_DOF, vpe, material, pressure_nodes, t_col, P_col, static_pressure = Mesh_Properties()
+mesh, u_DOF, vpe, material, pressure_nodes, t_col, P_col, f_vect = Mesh_Properties()
 
 #ANÁLISE ESTÁTICAs
 #MATRIZ K
@@ -1001,10 +1018,6 @@ k = k_global(len(vpe), vpe, material)                       #calculo matriz K
 #k_df = pd.DataFrame(k)                                      #converter pra dataframe
 #k_df.to_excel('k.xlsx', index=False)                        #guardar DF no excel
 
-#CARREGAMENTO                                                         
-carr = loading(len(vpe), vpe,static_pressure)                                                     #calcular vetor de carregamento (como array 1D)
-f_vect = np.reshape(carr,(-1,1))                                                            #converter carr para um vetor (array 2D)
-#print("vetor carregamento:\n",f_vect)                   
 
 #SOLUÇÃO E POS-PROCESSAMENTO ESTÁTICA
 u_global = StaticSolver(k, f_vect, u_DOF)                                                   #calculo dos deslocamentos

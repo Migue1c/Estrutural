@@ -856,6 +856,7 @@ def ModalSolver(k:np.ndarray, m:np.ndarray, u_DOF:np.ndarray):
 
 #Dinamic Solution:
 #loading, t_col, P_col
+#inputs need change
 def DinamicSolver(m:np.ndarray, c:np.ndarray, k:np.ndarray, f:np.ndarray, u_DOF:np.ndarray, tk:float, delta_t:float, t_final:float):
 
     #Reduce Matrices

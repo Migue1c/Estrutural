@@ -131,9 +131,7 @@ def medium_pressure(pressao, ne):
     return press_medium
 
 
-def loading(ne: int, pressure) -> None:  # To be verified
-    global load_vct
-    global vpe
+def loading(ne: int, vpe, pressure) -> None:  # To be verified
     load_vct = np.zeros(3 * (ne + 1))
     for i in range(0, ne):
         phi = vpe[i, 1]
@@ -149,9 +147,9 @@ def loading(ne: int, pressure) -> None:  # To be verified
         A15 = 0.5 * ri * np.cos(phi) + (7 / 20) * hi * np.sin(phi) * np.cos(phi)
         A16 = hi * (-(1 / 12) * ri - (1 / 20) * hi * np.sin(phi))
         v_carr = 2*np.pi*hi*p*np.array([A11, A12, A13, A14, A15, A16])
-
+        
         load_vct[3 * i:3 * i + 6] = load_vct[3 * i:3 * i + 6] + v_carr
-    print(load_vct)
+
     return load_vct
 
 # Carregamento Dinâmico

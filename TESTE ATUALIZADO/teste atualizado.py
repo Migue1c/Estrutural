@@ -778,10 +778,6 @@ def m_global(ne:int, vpe, mat, ni=1200, sparse=False) -> np.ndarray:
         ModalSolver(k_global,m_global, u_DOF)
     output = np.array[eig_vals,eig_vect]
 
-#def modal(eig_vals):
-    natfreq = np.sort(np.sqrt(eig_vals))
-    return natfreq
-
 
 #ESTEVES
 #DINÂMICA

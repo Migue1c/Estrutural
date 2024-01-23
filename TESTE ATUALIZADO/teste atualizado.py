@@ -981,11 +981,11 @@ mesh, u_DOF, vpe, material, pressure_nodes, t_col, P_col, static_pressure = Mesh
 #ANÁLISE ESTÁTICAs
 #MATRIZ K
 k = k_global(len(vpe), vpe, material)                       #calculo matriz K
-#k_df = pd.DataFrame(k)                                      #converter pra dataframe
-#k_df.to_excel('k.xlsx', index=False)                        #guardar DF no excel
+#k_df = pd.DataFrame(k)                                     #converter pra dataframe
+#k_df.to_excel('k.xlsx', index=False)                       #guardar DF no excel
 
 #CARREGAMENTO
-carr = loading(len(vpe), vpe, static_pressure)                     #calcular vetor de carregamento (como array 1D)
+carr = loading(len(vpe), vpe, static_pressure)              #calcular vetor de carregamento (como array 1D)
 f_vect = np.reshape(carr,(-1,1))                            #converter carr para um vetor (array 2D)
 #print("vetor carregamento:\n",f_vect)                   
 
@@ -1010,7 +1010,7 @@ m_gl = m_global(len(vpe), vpe, material, ni=1200, sparse=False)#calculo matriz M
 #print(m)
 
 #SOLUÇÃO E POS-PROCESSAMENTO MODAL
-natfreq, eig_vect = ModalSolver(k, m_gl, u_DOF)               #calculo valores e vetores próprios
+natfreq, eig_vect = ModalSolver(k, m_gl, u_DOF)              #calculo valores e vetores próprios
 #print("valores proprios:\n",natfreq)                      
 #print("vetores proprios:\n",eig_vect)                   
 #print("freq. natural 1:\n",natfreq1)
@@ -1019,9 +1019,9 @@ natfreq, eig_vect = ModalSolver(k, m_gl, u_DOF)               #calculo valores e
 
 #ANÁLISE DINÂMICA
 #MATRIZ C
-c = c_global(k, m_gl, natfreq[0], natfreq[1])                   #calculo matriz C
-#c_df = pd.DataFrame(c)                                      #converter pra dataframe
-#c_df.to_excel('c.xlsx', index=False)                        #guardar DF no excel
+c = c_global(k, m_gl, natfreq[0], natfreq[1])                 #calculo matriz C
+#c_df = pd.DataFrame(c)                                       #converter pra dataframe
+#c_df.to_excel('c.xlsx', index=False)                         #guardar DF no excel
 #print(c)
 
 #DinamicSolver(m:np.ndarray, c:np.ndarray, k:np.ndarray, f:np.ndarray, x_0:np.ndarray, x_0_d:np.ndarray, u_DOF:np.ndarray, tk:float, delta_t:float, t_final:float, loading, t_col, P_col)

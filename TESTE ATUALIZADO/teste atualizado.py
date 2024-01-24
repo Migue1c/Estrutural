@@ -480,6 +480,7 @@ def k_global(ne:int, vpe, mat, ni=1200, sparse=False) -> np.ndarray:
     else:
         k_globalM = np.zeros((3*(ne+1), 3*(ne+1)), dtype='float64')
         for i in range(0,ne):
+
             k_globalM[3*i:3*i+6,3*i:3*i+6] = k_globalM[3*i:3*i+6,3*i:3*i+6] + kes[:,:,i]
     
     return k_globalM
@@ -899,12 +900,12 @@ def ModalSolver(k:np.ndarray, m:np.ndarray, u_DOF:np.ndarray):
     #Solve the eigenvalue problem
     '''
     a = np.linalg.inv(m_red) @ k_red
-    eig_vals, eig_vect = np.linalg.eig(a)
-    #print(eig_vals)
+    eig_vals, eig_vect = np.linalg.eigh(a)
+    print("metodo1\n",eig_vals)
     #print("vetores proprios v1:\n",eig_vect)
     '''
     eig_vals, eig_vect = sp.linalg.eig(k_red, m_red)
-    print(eig_vals)
+    print("metodo2\n",eig_vals)
     #filter the results
     eig_vals = np.array(eig_vals,dtype=float)
     i=int(len(eig_vals)-1)
@@ -924,7 +925,6 @@ def ModalSolver(k:np.ndarray, m:np.ndarray, u_DOF:np.ndarray):
     guide_vect = np.argsort(eig_vals)
     eig_vals1 = np.sqrt(eig_vals)
     natfreq = np.sort(eig_vals1)
-    print(natfreq)
     #sort vector
     new_mtx = np.zeros((len(eig_vect),len(guide_vect)))
     n=0

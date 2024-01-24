@@ -43,38 +43,16 @@ def Mesh_Properties():
 
     df_mat      = pd.read_excel('Livro1.xlsx', sheet_name = 'Materials', usecols = matcols, nrows = 7)
     
-
-    
-    
-    
-    
-   
-    
-    
-    
-    
-    
-    
-    
     # Matrix with the properties of the materials
     material = np.array(df_mat.values)
-    
-    #print(material)
-    
-  
-
 
     # Creates a DataFrame with the same columns, but with no values
     empty_df        = pd.DataFrame(np.nan, index=[0], columns = df_read)
-
-
-    #print(empty_df)
     
     #The first point can't be (0,0) due to mathematical issues
     if df.loc[0, 'r'] == 0:
 
         df.loc[0, 'r']  =  df.loc[0, 'r'] + 10**(-6) 
-
 
     # Adding a point due to the discontinuity, regarding the geometry:
     # helps on interpolation
@@ -150,7 +128,7 @@ def Mesh_Properties():
         #Normalizar o vetor        
         #Calcular o ponto e adicionar ao DataFrame
         
-    if 1==1: ################## A alterar, para variar com os dados inseridos no excel
+    if 1==0: ################## A alterar, para variar com os dados inseridos no excel
         i = 0
         while i < (len(df['Points'])):
             
@@ -227,7 +205,7 @@ def Mesh_Properties():
     df[columns_interpolate] = df[columns_interpolate].interpolate(method='linear')
     df.loc[len(df)-1, 'thi'] = np.nan 
     
-    if 1==0: ################## A alterar, para variar com os dados inseridos no excel
+    if 1==1: ################## A alterar, para variar com os dados inseridos no excel
         # Interpolation Linear Type
         columns_interpolate     = ['z', 'r']
         df[columns_interpolate] = df[columns_interpolate].interpolate(method='linear')
@@ -239,7 +217,6 @@ def Mesh_Properties():
     # Matriz com as coordenadas dos pontos / Malha
     mesh = np.array(df[['z','r']].values)
     #print(mesh)
-    
     
     # Carregamento para cada nó
     pressure_nodes = np.array(df[['Loading']].values)
@@ -287,8 +264,6 @@ def Mesh_Properties():
         
         j += 1
 
-    #print(Boundary_Conditions)
-
 
 
     # Nome do Vetor construído com os dados da coluna "Value" : u_DOF
@@ -331,7 +306,7 @@ def Mesh_Properties():
             elif df.loc[i+1, 'r'] < df.loc[i, 'r']:
                 vpe.loc[i, 'phi'] = -(math.pi/2)
 
-    #print(vpe)
+  
 
     vpe = np.array(vpe.values)
 
@@ -346,6 +321,7 @@ def Mesh_Properties():
     #print(material)
     #print(vpe)
     
+  
 
     ################### Static - Loading
     
@@ -381,7 +357,7 @@ def Mesh_Properties():
     
     
     ############################### Dynamic - Loading
-    
+   
     loading_cols = ['t_col', 'PressureCol']
     df_loading  = pd.read_excel('Livro1.xlsx', sheet_name = 'Loading', usecols = loading_cols, nrows = k2 )
     #print(df_loading)
@@ -390,7 +366,7 @@ def Mesh_Properties():
     #print(t_col)
     p_col = np.array(df_loading[['PressureCol']].values) #column vector
     #print(p_col)
-    
+  
     
     return mesh, u_DOF, vpe, material, pressure_nodes, t_col, p_col, f_vect
 
@@ -471,7 +447,11 @@ def Kestacked(ne:int, vpe, mat, ni:int, simpson=True) -> np.ndarray: # Incoehere
             integrand = lambda s: Bmatrix(s1_(s),i,r(s),phi, vpe).T@D@Bmatrix(s1_(s),i,r(s),phi, vpe)*(r(s))
             ke = 2*np.pi*h*((5/9)*integrand(-np.sqrt(3/5))+(8/9)*integrand(0)+(5/9)*integrand(np.sqrt(3/5)))
             #print(ke)
+        #if_sym = np.allclose(ke, ke.T)
+        #print('ke:', if_sym)
         kes[:,:,i] = ke
+  
+        
     return kes
 
 def k_global(ne:int, vpe, mat, ni=1200, sparse=False) -> np.ndarray:
@@ -489,12 +469,13 @@ def k_global(ne:int, vpe, mat, ni=1200, sparse=False) -> np.ndarray:
         #print(row)
         #print(column)
         #print(data)
-        k_globalM = sp.sparse.bsr_array((data, (row, column)), shape=(3*(ne+1), 3*(ne+1)))#.toarray()     
+        k_globalM = sp.sparse.bsr_array((data, (row, column)), shape=(3*(ne+1), 3*(ne+1)))#.toarray() 
+        
     else:
         k_globalM = np.zeros((3*(ne+1), 3*(ne+1)), dtype='float64')
-        for i in range(0,ne):
+        for i in range(0, ne):
             k_globalM[3*i:3*i+6,3*i:3*i+6] = k_globalM[3*i:3*i+6,3*i:3*i+6] + kes[:,:,i]
-    
+
     return k_globalM
     #print(f'Element {i+1}')
     #for j in range(0, 3*(ne+1)):
@@ -778,6 +759,8 @@ def Mestacked(ne:int, vpe, mat, ni:int, simpson=True) -> np.ndarray:
 
             me = rho*t*2*sp.pi*h*sp.integrate.simpson(I, x=None, dx=1/ni, axis=-1)
         #print('The mass matrix is:\n', me)
+        #if_sym2 = np.allclose(me, me.T)
+        #print('me:', if_sym2)
         mes[:,:,i] = me
     return mes
 
@@ -800,7 +783,9 @@ def m_global(ne:int, vpe, mat, ni=1200, sparse=False) -> np.ndarray:
     else:
         m_globalM = np.zeros((3*(ne+1), 3*(ne+1)), dtype='float64')
         for i in range(0,ne):
-            m_globalM[3*i:3*i+6,3*i:3*i+6] = m_globalM[3*i:3*i+6,3*i:3*i+6] + mes[:,:,i]
+           m_globalM[3*i:3*i+6,3*i:3*i+6] = m_globalM[3*i:3*i+6,3*i:3*i+6] + mes[:,:,i]
+            
+    
     return m_globalM
 
 #def modal_analysis(ne, vpe, u_DOF, mat, ni=1200, sparse=False, is_called_from_dynamic=False):
@@ -888,9 +873,11 @@ def StaticSolver(k:np.ndarray, f:np.ndarray, u_DOF:np.ndarray):
 def ModalSolver(k:np.ndarray, m:np.ndarray, u_DOF:np.ndarray):
 
     #Reduce stiffness and mass matrices
+    
+    
     k_red = RedMatrix(k, u_DOF)          
     m_red = RedMatrix(m, u_DOF)
-
+    
     #Solve the eigenvalue problem
     '''
     a = np.linalg.inv(m_red) @ k_red
@@ -899,7 +886,7 @@ def ModalSolver(k:np.ndarray, m:np.ndarray, u_DOF:np.ndarray):
     print("vetores proprios v1:\n",eig_vect)
     '''
     eig_vals, eig_vect = sp.linalg.eig(k_red, m_red)
-
+    
     #filter the results
     eig_vals = np.array(eig_vals,dtype=float)
     i=int(len(eig_vals)-1)
@@ -917,7 +904,7 @@ def ModalSolver(k:np.ndarray, m:np.ndarray, u_DOF:np.ndarray):
 
     #sort values 
     guide_vect = np.argsort(eig_vals)
-    natfreq = np.sort(np.sqrt(eig_vals))
+    natfreq = np.sort(np.sqrt(eig_vals))/(2*np.pi)
 
     #sort vector
     new_mtx = np.zeros((len(eig_vect),len(guide_vect)))
@@ -927,6 +914,7 @@ def ModalSolver(k:np.ndarray, m:np.ndarray, u_DOF:np.ndarray):
         n += 1
     eig_vect = new_mtx
 
+    #print('Valores Próprios:', natfreq)
     return natfreq, eig_vect
 
 #Dinamic Solution:
@@ -1010,14 +998,17 @@ def DinamicSolver(m:np.ndarray, c:np.ndarray, k:np.ndarray, f:np.ndarray, u_DOF:
 
 
 #LEITURA DO FICHEIRO
-mesh, u_DOF, vpe, material, pressure_nodes, t_col, P_col, f_vect = Mesh_Properties()
+mesh, u_DOF, vpe, material, pressure_nodes, t_col, p_col, f_vect = Mesh_Properties()
 
 #ANÁLISE ESTÁTICAs
 #MATRIZ K
-k = k_global(len(vpe), vpe, material)                       #calculo matriz K
-#k_df = pd.DataFrame(k)                                      #converter pra dataframe
-#k_df.to_excel('k.xlsx', index=False)                        #guardar DF no excel
 
+k = k_global(len(vpe), vpe, material)    #calculo matriz K
+if_sym4 = np.allclose(k, k.T)
+print('globalk:', if_sym4)
+k_df = pd.DataFrame(k)              #converter pra dataframe
+#print('K:\n',k_df)
+#k_df.to_excel('k.xlsx', index=False)                        #guardar DF no excel
 
 #SOLUÇÃO E POS-PROCESSAMENTO ESTÁTICA
 u_global = StaticSolver(k, f_vect, u_DOF)                                                   #calculo dos deslocamentos
@@ -1035,7 +1026,10 @@ fsy, fsu = FS(u_global, vpe, material, t_VM, tensoes_N)                         
 #ANÁLISE MODAL
 #MATRIZ M
 m_gl = m_global(len(vpe), vpe, material, ni=1200, sparse=False)#calculo matriz M
-#m_df = pd.DataFrame(m)                                      #converter pra dataframe
+if_sym = np.allclose(m_gl, m_gl.T)
+print('globalM:', if_sym)
+m_df = pd.DataFrame(m_gl)                                      #converter pra dataframe
+#print('M:\n',m_df)
 #m_df.to_excel('m.xlsx', index=False)                        #guardar DF no excel
 #print(m)
 
@@ -1601,6 +1595,7 @@ geometry_plot(mesh,rev_degrees,main_folder,geometry_photo, show)
 tecplot_exporter('output_export_tecplot_3d.txt', rev_points, mesh, u_global, strains, tensoes_N, tensoes_memb, t_VM, fsy, fsu)
 tec_export_defor('output_export_tecplot_3d_deformed.txt', rev_points, mesh, u_global, strains, tensoes_N, tensoes_memb, t_VM, fsy, fsu)
 
+"""
 #Graphs
 
 #Stress - Graphs
@@ -1625,6 +1620,8 @@ graphs (mesh, rev_degrees, stress_matrix_chi_theta, strain_chi_theta_photo, stra
 #Safety Factor - Graphs
 graphs (mesh, rev_degrees, safety_matrix_fsy, safety_fsy_photo, safety_folder,safety_fsy_graph,show,static_folder)
 graphs (mesh, rev_degrees,safety_matrix_fsu,safety_fsu_photo,safety_folder,safety_fsu_graph,show,static_folder)
+
+"""
 
 
 #Files 

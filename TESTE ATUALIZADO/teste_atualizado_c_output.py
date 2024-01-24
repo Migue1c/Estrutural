@@ -733,7 +733,7 @@ def load_p(vpe, ne, P, pressure_nodes):
         v_carr = 2 * np.pi * hi * p * np.array([A11, A12, A13, A14, A15, A16])
 
         load_vct[3 * i:3 * i + 6] = load_vct[3 * i:3 * i + 6] + v_carr
-
+    load_vct = load_vct.reshape((-1, 1))
     return load_vct
 
     

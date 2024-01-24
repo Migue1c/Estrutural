@@ -728,7 +728,7 @@ def load_p(vpe, ne, P, pressure_nodes):
         v_carr = 2 * np.pi * hi * p * np.array([A11, A12, A13, A14, A15, A16])
 
         load_vct[3 * i:3 * i + 6] = load_vct[3 * i:3 * i + 6] + v_carr
-
+    load_vct = load_vct.reshape((-1, 1))
     return load_vct
 
     
@@ -1008,8 +1008,8 @@ mesh, u_DOF, vpe, material, pressure_nodes, t_col, p_col, f_vect = Mesh_Properti
 #ANÁLISE ESTÁTICAs
 #MATRIZ K
 k = k_global(len(vpe), vpe, material)                       #calculo matriz K
-k_df = pd.DataFrame(k)                                     #converter pra dataframe
-k_df.to_excel('k.xlsx', index=False)                       #guardar DF no excel
+#k_df = pd.DataFrame(k)                                     #converter pra dataframe
+#k_df.to_excel('k.xlsx', index=False)                       #guardar DF no excel
 
 #SOLUÇÃO E POS-PROCESSAMENTO ESTÁTICA
 u_global = StaticSolver(k, f_vect, u_DOF)                   #calculo dos deslocamentos
@@ -1035,7 +1035,7 @@ m_gl = m_global(len(vpe), vpe, material, ni=1200, sparse=False)#calculo matriz M
 natfreq, eig_vect = ModalSolver(k, m_gl, u_DOF)              #calculo valores e vetores próprios
 #print("valores proprios:\n",natfreq)                      
 #print("vetores proprios:\n",eig_vect)                   
-print("freq. natural 1:\n",natfreq[0])
+#print("freq. natural 1:\n",natfreq[0])
 #print("freq. natural 2:\n",natfreq2)
 
 
@@ -1045,7 +1045,7 @@ c = c_global(k, m_gl, natfreq[0], natfreq[1])                 #calculo matriz C
 #c_df = pd.DataFrame(c)                                       #converter pra dataframe
 #c_df.to_excel('c.xlsx', index=False)                         #guardar DF no excel
 #print(c)
-'''
+
 matrix_u, matrix_ud, matrix_ud2 = DinamicSolver(k, m_gl, c, u_DOF, t_col, p_col, vpe, len(vpe), pressure_nodes)
 print(matrix_u)
 m_u_df = pd.DataFrame(matrix_u)                                #converter pra dataframe
@@ -1057,4 +1057,3 @@ print(matrix_ud2)
 m_ud2_df = pd.DataFrame(matrix_ud2)                                #converter pra dataframe
 m_ud2_df.to_excel('ud2.xlsx', index=False)                         #guardar DF no excel
 print(matrix_u.shape[1])
-'''

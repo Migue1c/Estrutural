@@ -3,6 +3,9 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import math
 import scipy as sp
+import warnings
+import time
+
 
 # Ignorar o aviso específico
 warnings.filterwarnings("ignore", message="The behavior of DataFrame concatenation with empty or all-NA entries is deprecated.*")

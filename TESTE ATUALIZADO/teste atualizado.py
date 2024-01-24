@@ -721,10 +721,10 @@ def load_p(vpe, ne, P, pressure_nodes):
         v_carr = np.zeros(6)
         A11 = 0.5 * ri * (-np.sin(phi)) - (3 / 20) * np.sin(phi) ** 2 * hi
         A12 = 0.5 * ri * np.cos(phi) + (3 / 20) * np.sin(phi) * np.cos(phi) * hi
-        A13 = hi * ((1 / 12) * ri + (1 / 30) * hi * np.sin(phi))
+        A13 = 0 #hi * ((1 / 12) * ri + (1 / 30) * hi * np.sin(phi))
         A14 = 0.5 * ri * (-np.sin(phi)) - (7 / 20) * hi * np.sin(phi) ** 2
         A15 = 0.5 * ri * np.cos(phi) + (7 / 20) * hi * np.sin(phi) * np.cos(phi)
-        A16 = hi * (-(1 / 12) * ri - (1 / 20) * hi * np.sin(phi))
+        A16 = 0 #hi * (-(1 / 12) * ri - (1 / 20) * hi * np.sin(phi))
         v_carr = 2 * np.pi * hi * p * np.array([A11, A12, A13, A14, A15, A16])
 
         load_vct[3 * i:3 * i + 6] = load_vct[3 * i:3 * i + 6] + v_carr
@@ -890,9 +890,6 @@ def ModalSolver(k:np.ndarray, m:np.ndarray, u_DOF:np.ndarray):
             eig_vals = np.delete(eig_vals, i)
             eig_vect = np.delete(eig_vect, i, axis=1)
         i -= 1  
-    #print("lenght valores proprios:",len(eig_vals))
-    #print("lenght vetores proprios:",np.shape(eig_vect)[1])
-    #print(eig_vals)
 
     #re-add zeros to the eigenvectors matrix
     eig_vect = RdfMatrix(eig_vect, u_DOF)
@@ -914,7 +911,7 @@ def ModalSolver(k:np.ndarray, m:np.ndarray, u_DOF:np.ndarray):
 
 #Dinamic Solution:
 #STATIC TEST VERSION ONLY
-def DinamicSolver(k:np.ndarray, m:np.ndarray, c:np.ndarray, u_DOF:np.ndarray, t_col, p_col, vpe, ne, pressure_nodes):
+def DynamicSolver(k:np.ndarray, m:np.ndarray, c:np.ndarray, u_DOF:np.ndarray, t_col, p_col, vpe, ne, pressure_nodes):
 
     #static test only
     #Reduce Matrices
@@ -923,7 +920,87 @@ def DinamicSolver(k:np.ndarray, m:np.ndarray, c:np.ndarray, u_DOF:np.ndarray, t_
     c = RedMatrix(c, u_DOF)
 
     #Define starting values vector (reduced)
-    l = k.shape[0]          #sem -1 burro
+    l = k.shape[0]             #sem -1 burro
+    x_0 = np.zeros([l,1])
+    x_0_d = np.zeros([l,1])
+    x_0_d2 = np.zeros([l,1])
+
+    #Define matrices to store results
+    matrix_u = x_0
+    matrix_ud = x_0_d
+    matrix_ud2 = x_0_d2
+   
+    #0 for Average Acceleration Method; 1 for Linear Acceleration Method
+    method = 0
+    if method == 0:
+        #Average Acceleration Method:
+        gamma = 1/2
+        beta =  1/6
+    else:
+        #Linear Acceleration Method:
+        gamma = 1/2
+        beta = 1/4
+    
+    #time constraints
+    l = t_col.shape[0] - 1
+    tk = t_col[0,0]
+    t_final = t_col[l,0]
+    fg = 0
+    f = load_p(vpe, ne, p_col[fg,0], pressure_nodes)
+    f = RedMatrix(f, u_DOF)
+
+    while tk < t_final :
+        
+        #Time increment:
+        tk0 = tk
+        fg += 1
+        tk = t_col[fg,0]
+        print(tk)
+        delta_t = tk - tk0
+        
+        #Prediction:
+        x_1_d = x_0_d + (1 - gamma) * delta_t * x_0_d2
+        x_1 = x_0 + delta_t * x_0_d + (0.5 - beta)*(delta_t**2) * x_0_d2
+        
+        #Force vector for tk+1
+        f = load_p(vpe, ne, p_col[fg,0], pressure_nodes)
+        f = RedMatrix(f, u_DOF)
+
+        #Equilibrium eqs.:
+        s = m + (gamma * delta_t * c) + (beta * (delta_t**2) * k)
+        x_1_d2 = np.linalg.inv(s) @ (f - (c @ x_0_d) - (k @ x_0) )
+       
+        #Correction:
+        x_1_d = x_1_d + (delta_t * gamma * x_1_d2)
+        x_1 = x_1 + ((delta_t**2) * beta * x_1_d2)
+ 
+        #store values in matrices
+        matrix_u = np.append(matrix_u, x_1, axis=1)
+        matrix_ud = np.append(matrix_ud, x_1_d, axis=1)
+        matrix_ud2 = np.append(matrix_ud2, x_1_d2, axis=1)
+
+        #reset starting values for next iteration:
+        x_0 = x_1
+        x_0_d = x_1_d
+        x_0_d2 = x_1_d2
+
+    #add lines with zeros to the matrices
+    matrix_u = RdfMatrix(matrix_u, u_DOF)
+    matrix_ud = RdfMatrix(matrix_ud, u_DOF)
+    matrix_ud2 = RdfMatrix(matrix_ud2, u_DOF)
+
+    return matrix_u, matrix_ud, matrix_ud2
+
+#def DynamicSolver(k:np.ndarray, m:np.ndarray, c:np.ndarray, u_DOF:np.ndarray, t_col, p_col, vpe, ne, pressure_nodes):
+
+    #static test only
+    #Reduce Matrices
+    k = RedMatrix(k, u_DOF)
+    m = RedMatrix(m, u_DOF)
+    c = RedMatrix(c, u_DOF)
+
+    #Define starting values vector (reduced)
+    l = k.shape[0]             #sem -1 burro
     x_0 = np.zeros([l,1])
     x_0_d = np.zeros([l,1])
     x_0_d2 = np.zeros([l,1])
@@ -954,8 +1031,6 @@ def DinamicSolver(k:np.ndarray, m:np.ndarray, c:np.ndarray, u_DOF:np.ndarray, t_
         
         #Force vector for current tk
         f = load_p(vpe, ne, p_col[fg,0], pressure_nodes)
-        #print("vetor forças",fg)
-        #print(f)
         f = RedMatrix(f, u_DOF)
 
         #Starting value [x_d2_(0)]
@@ -976,8 +1051,8 @@ def DinamicSolver(k:np.ndarray, m:np.ndarray, c:np.ndarray, u_DOF:np.ndarray, t_
         x_1_d2 = np.linalg.inv(s) @ (f - (c @ x_0_d) - (k @ x_0) )
        
         #Correction:
-        x_1_d = x_1_d + delta_t * gamma * x_1_d2
-        x_1 = x_1 + (delta_t**2) * beta * x_1_d2
+        x_1_d = x_1_d + (delta_t * gamma * x_1_d2)
+        x_1 = x_1 + ((delta_t**2) * beta * x_1_d2)
         #print("vetor deslocamentos",fg)
         #print(x_1)
         #store values in matrices
@@ -1005,6 +1080,7 @@ def DinamicSolver(k:np.ndarray, m:np.ndarray, c:np.ndarray, u_DOF:np.ndarray, t_
 
 #LEITURA DO FICHEIRO
 mesh, u_DOF, vpe, material, pressure_nodes, t_col, p_col, f_vect = Mesh_Properties()
+
 #ANÁLISE ESTÁTICAs
 #MATRIZ K
 k = k_global(len(vpe), vpe, material)                       #calculo matriz K
@@ -1046,14 +1122,14 @@ c = c_global(k, m_gl, natfreq[0], natfreq[1])                 #calculo matriz C
 #c_df.to_excel('c.xlsx', index=False)                         #guardar DF no excel
 #print(c)
 
-matrix_u, matrix_ud, matrix_ud2 = DinamicSolver(k, m_gl, c, u_DOF, t_col, p_col, vpe, len(vpe), pressure_nodes)
-print(matrix_u)
+matrix_u, matrix_ud, matrix_ud2 = DynamicSolver(k, m_gl, c, u_DOF, t_col, p_col, vpe, len(vpe), pressure_nodes)
+
 m_u_df = pd.DataFrame(matrix_u)                                #converter pra dataframe
 m_u_df.to_excel('u.xlsx', index=False)                         #guardar DF no excel
-print(matrix_ud)
+print(m_u_df)
 m_ud_df = pd.DataFrame(matrix_ud)                                #converter pra dataframe
 m_ud_df.to_excel('ud.xlsx', index=False)                         #guardar DF no excel
-print(matrix_ud2)
+print(m_ud_df)
 m_ud2_df = pd.DataFrame(matrix_ud2)                                #converter pra dataframe
-m_ud2_df.to_excel('ud2.xlsx', index=False)                         #guardar DF no excel
-print(matrix_u.shape[1])
+m_ud2_df.to_excel('ud2.xlsx', index=False)                       #guardar DF no excel
+print(m_ud2_df)

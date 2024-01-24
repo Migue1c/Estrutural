@@ -218,7 +218,7 @@ def Mesh_Properties():
         df[columns_interpolate] = df[columns_interpolate].interpolate(method='linear')
         df.loc[len(df)-1, 'thi'] = np.nan 
 
-    print(df)
+    #print(df)
 
 
     # Matriz com as coordenadas dos pontos / Malha
@@ -359,7 +359,7 @@ def Mesh_Properties():
         load_vct[3 * i:3 * i + 6] = load_vct[3 * i:3 * i + 6] + v_carr
 
     load_vct = np.reshape(load_vct,(-1,1))
-    print(load_vct)
+    #print(load_vct)
 
     f_vect = load_vct
     
@@ -458,6 +458,7 @@ def Kestacked(ne:int, vpe, mat, ni:int, simpson=True) -> np.ndarray: # Incoehere
             ke = 2*np.pi*h*((5/9)*integrand(-np.sqrt(3/5))+(8/9)*integrand(0)+(5/9)*integrand(np.sqrt(3/5)))
             #print(ke)
         kes[:,:,i] = ke
+        
     return kes
 
 def k_global(ne:int, vpe, mat, ni=1200, sparse=False) -> np.ndarray:
@@ -731,6 +732,7 @@ def load_p(vpe, ne, P, pressure_nodes):
 
     max = np.amax(pressure_nodes)
     pressure_nodes1 = np.zeros(np.size(pressure_nodes))
+    #print(pressure_nodes)
     for i in range(0, ne+1):
         pressure_nodes1[i] = pressure_nodes[i] / max * P
     #pressão media
@@ -754,7 +756,7 @@ def load_p(vpe, ne, P, pressure_nodes):
         v_carr = 2 * np.pi * hi * p * np.array([A11, A12, A13, A14, A15, A16])
 
         load_vct[3 * i:3 * i + 6] = load_vct[3 * i:3 * i + 6] + v_carr
-
+    load_vct = np.reshape(load_vct,(-1,1))
     return load_vct
 
     
@@ -888,18 +890,21 @@ def StaticSolver(k:np.ndarray, f:np.ndarray, u_DOF:np.ndarray):
 def ModalSolver(k:np.ndarray, m:np.ndarray, u_DOF:np.ndarray):
 
     #Reduce stiffness and mass matrices
-    k_red = RedMatrix(k, u_DOF)          
+    k_red = RedMatrix(k, u_DOF)
+    k_redf = pd.DataFrame(k_red)                                 #converter pra dataframe
+    k_redf.to_excel('k_red.xlsx', index=False)                       #guardar DF no excel   
     m_red = RedMatrix(m, u_DOF)
-
+    m_redf = pd.DataFrame(m_red)                                 #converter pra dataframe
+    m_redf.to_excel('m_red.xlsx', index=False)                       #guardar DF no excel   
     #Solve the eigenvalue problem
     '''
     a = np.linalg.inv(m_red) @ k_red
     eig_vals, eig_vect = np.linalg.eig(a)
-    print(eig_vals)
-    print("vetores proprios v1:\n",eig_vect)
+    #print(eig_vals)
+    #print("vetores proprios v1:\n",eig_vect)
     '''
     eig_vals, eig_vect = sp.linalg.eig(k_red, m_red)
-
+    print(eig_vals)
     #filter the results
     eig_vals = np.array(eig_vals,dtype=float)
     i=int(len(eig_vals)-1)
@@ -917,8 +922,9 @@ def ModalSolver(k:np.ndarray, m:np.ndarray, u_DOF:np.ndarray):
 
     #sort values 
     guide_vect = np.argsort(eig_vals)
-    natfreq = np.sort(np.sqrt(eig_vals))
-
+    eig_vals1 = np.sqrt(eig_vals)
+    natfreq = np.sort(eig_vals1)
+    print(natfreq)
     #sort vector
     new_mtx = np.zeros((len(eig_vect),len(guide_vect)))
     n=0
@@ -962,15 +968,17 @@ def DinamicSolver(k:np.ndarray, m:np.ndarray, c:np.ndarray, u_DOF:np.ndarray, t_
         beta = 1/4
     
     #time constraints
-    l = t_col.shape[0] - 1 
+    l = t_col.shape[0] - 1
     tk = t_col[0,0]
     t_final = t_col[l,0]
     fg = 0
     
-    while tk <= t_final :
+    while tk < t_final :
         
         #Force vector for current tk
         f = load_p(vpe, ne, p_col[fg,0], pressure_nodes)
+        #print("vetor forças",fg)
+        #print(f)
         f = RedMatrix(f, u_DOF)
 
         #Starting value [x_d2_(0)]
@@ -993,7 +1001,8 @@ def DinamicSolver(k:np.ndarray, m:np.ndarray, c:np.ndarray, u_DOF:np.ndarray, t_
         #Correction:
         x_1_d = x_1_d + delta_t * gamma * x_1_d2
         x_1 = x_1 + (delta_t**2) * beta * x_1_d2
-       
+        #print("vetor deslocamentos",fg)
+        #print(x_1)
         #store values in matrices
         matrix_u = np.append(matrix_u, x_1, axis=1)
         matrix_ud = np.append(matrix_ud, x_1_d, axis=1)
@@ -1022,8 +1031,8 @@ mesh, u_DOF, vpe, material, pressure_nodes, t_col, p_col, f_vect = Mesh_Properti
 #ANÁLISE ESTÁTICAs
 #MATRIZ K
 k = k_global(len(vpe), vpe, material)                       #calculo matriz K
-#k_df = pd.DataFrame(k)                                     #converter pra dataframe
-#k_df.to_excel('k.xlsx', index=False)                       #guardar DF no excel
+k_df = pd.DataFrame(k)                                     #converter pra dataframe
+k_df.to_excel('k.xlsx', index=False)                       #guardar DF no excel
 
 #SOLUÇÃO E POS-PROCESSAMENTO ESTÁTICA
 u_global = StaticSolver(k, f_vect, u_DOF)                   #calculo dos deslocamentos
@@ -1041,7 +1050,7 @@ fsy, fsu = FS(u_global, vpe, material, t_VM, tensoes_N)     #calculo dos fatores
 #ANÁLISE MODAL
 #MATRIZ M
 m_gl = m_global(len(vpe), vpe, material, ni=1200, sparse=False)#calculo matriz M
-#m_df = pd.DataFrame(m)                                      #converter pra dataframe
+#m_df = pd.DataFrame(m_gl)                                      #converter pra dataframe
 #m_df.to_excel('m.xlsx', index=False)                        #guardar DF no excel
 #print(m)
 
@@ -1049,7 +1058,7 @@ m_gl = m_global(len(vpe), vpe, material, ni=1200, sparse=False)#calculo matriz M
 natfreq, eig_vect = ModalSolver(k, m_gl, u_DOF)              #calculo valores e vetores próprios
 #print("valores proprios:\n",natfreq)                      
 #print("vetores proprios:\n",eig_vect)                   
-#print("freq. natural 1:\n",natfreq1)
+print("freq. natural 1:\n",natfreq[0])
 #print("freq. natural 2:\n",natfreq2)
 
 
@@ -1059,5 +1068,16 @@ c = c_global(k, m_gl, natfreq[0], natfreq[1])                 #calculo matriz C
 #c_df = pd.DataFrame(c)                                       #converter pra dataframe
 #c_df.to_excel('c.xlsx', index=False)                         #guardar DF no excel
 #print(c)
-
+'''
 matrix_u, matrix_ud, matrix_ud2 = DinamicSolver(k, m_gl, c, u_DOF, t_col, p_col, vpe, len(vpe), pressure_nodes)
+print(matrix_u)
+m_u_df = pd.DataFrame(matrix_u)                                #converter pra dataframe
+m_u_df.to_excel('u.xlsx', index=False)                         #guardar DF no excel
+print(matrix_ud)
+m_ud_df = pd.DataFrame(matrix_ud)                                #converter pra dataframe
+m_ud_df.to_excel('ud.xlsx', index=False)                         #guardar DF no excel
+print(matrix_ud2)
+m_ud2_df = pd.DataFrame(matrix_ud2)                                #converter pra dataframe
+m_ud2_df.to_excel('ud2.xlsx', index=False)                         #guardar DF no excel
+print(matrix_u.shape[1])
+'''

@@ -128,7 +128,7 @@ def Mesh_Properties():
         #Normalizar o vetor        
         #Calcular o ponto e adicionar ao DataFrame
         
-    if 1==0: ################## A alterar, para variar com os dados inseridos no excel
+    if 1==1: ################## A alterar, para variar com os dados inseridos no excel
         i = 0
         while i < (len(df['Points'])):
             
@@ -205,7 +205,7 @@ def Mesh_Properties():
     df[columns_interpolate] = df[columns_interpolate].interpolate(method='linear')
     df.loc[len(df)-1, 'thi'] = np.nan 
     
-    if 1==1: ################## A alterar, para variar com os dados inseridos no excel
+    if 1==0: ################## A alterar, para variar com os dados inseridos no excel
         # Interpolation Linear Type
         columns_interpolate     = ['z', 'r']
         df[columns_interpolate] = df[columns_interpolate].interpolate(method='linear')
@@ -366,6 +366,8 @@ def Mesh_Properties():
     #print(t_col)
     p_col = np.array(df_loading[['PressureCol']].values) #column vector
     #print(p_col)
+    
+    #print(df)
   
     
     return mesh, u_DOF, vpe, material, pressure_nodes, t_col, p_col, f_vect
@@ -733,7 +735,7 @@ def load_p(vpe, ne, P, pressure_nodes):
         v_carr = 2 * np.pi * hi * p * np.array([A11, A12, A13, A14, A15, A16])
 
         load_vct[3 * i:3 * i + 6] = load_vct[3 * i:3 * i + 6] + v_carr
-    load_vct = load_vct.reshape((-1, 1))
+
     return load_vct
 
     

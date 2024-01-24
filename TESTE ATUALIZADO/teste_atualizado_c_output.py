@@ -233,7 +233,7 @@ def Mesh_Properties():
         df[columns_interpolate] = df[columns_interpolate].interpolate(method='linear')
         df.loc[len(df)-1, 'thi'] = np.nan 
 
-    print(df)
+    #print(df)
 
 
     # Matriz com as coordenadas dos pontos / Malha
@@ -374,7 +374,7 @@ def Mesh_Properties():
         load_vct[3 * i:3 * i + 6] = load_vct[3 * i:3 * i + 6] + v_carr
 
     load_vct = np.reshape(load_vct,(-1,1))
-    print(load_vct)
+    #print(load_vct)
 
     f_vect = load_vct
     
@@ -1068,7 +1068,7 @@ print()
 ti_output = time.time()
 
 #Slice angle to be poltted
-rev_degrees = 360
+rev_degrees = 180
 rev_points = 250 
 
 #Folder Names
@@ -1351,9 +1351,9 @@ def graphs (points, rev_degress, metric_matrix, metric_name, metric_folder, grap
         surf = ax.plot_surface(np.vstack([x1, x2]), np.vstack([y1, y2]), np.vstack([z1, z2]), cmap = 'viridis', alpha=0.80)
         surf.set_array(metric_matrix[:, i])
 
-    ax.set_xlabel('R[mm]')
+    ax.set_xlabel('R[m]')
     ax.set_ylabel('')
-    ax.set_zlabel('Z[mm]')
+    ax.set_zlabel('Z[m]')
 
     # Set plot limits for better visualization
     ax.set_xlim(-max_radius, max_radius)
@@ -1509,6 +1509,35 @@ def tecplot_exporter(file_name, divisions, mesh, u_global, strains, tensoes_N, t
                 #file.write(f'{x[j,i]:.7e}  {y[j,i]:.7e}  {mesh[j,0]:.7e}  {u_global[3*j,0]:.7e}  {u_global[3*j+1,0]:.7e}  {u_global[3*j+2,0]:.7e}  {strains[j,0]:.7e}  {strains[j,1]:.7e}  {strains[j,2]:.7e}  {strains[j,3]:.7e}  {tensoes_N[j,0]:.7e}  {tensoes_N[j,1]:.7e}  {tensoes_N[j,2]:.7e}  {tensoes_N[j,3]:.7e}  {t_VM[j,0]:.7e}  {t_VM[j,1]:.7e}  {fsy[j]:.7e}  {fsu[j]:.7e}\n')
                 file.write(f'{x[j,i]:.7e}  {y[j,i]:.7e}  {mesh[j,0]:.7e}  {u_global[3*j,0]:.7e}  {u_global[3*j+1,0]:.7e}  {u_global[3*j+2,0]:.7e}  {strains[j,0]:.7e}  {strains[j,1]:.7e}  {strains[j,2]:.7e}  {strains[j,3]:.7e}  {tensoes_N[j,0]:.7e}  {tensoes_N[j,1]:.7e}  {tensoes_N[j,2]:.7e}  {tensoes_N[j,3]:.7e}  {tensoes_memb[j,0]:.7e}  {tensoes_memb[j,1]:.7e}  {t_VM[j,0]:.7e}  {t_VM[j,1]:.7e}  {fsy[j]:.7e}  {fsu[j]:.7e}\n')
 
+def tec_export_defor(file_name, divisions, mesh, u_global, strains, tensoes_N, tensoes_memb, t_VM, fsy, fsu):
+    n_nodes = len(mesh)
+    def_mesh = np.copy(mesh)
+    def_mesh[:,0] += u_global[0::3,0]*500
+    def_mesh[:,1] += u_global[1::3,0]*500
+
+    #divisions = 200
+    angles = np.linspace(0, 2 * np.pi, divisions, endpoint=True)
+
+    def_x = np.empty([n_nodes, divisions])
+    def_y = np.empty([n_nodes, divisions])
+
+    for i in range(0, n_nodes):
+        def_x[i, :] = def_mesh[i,1]*np.cos(angles)
+        def_y[i, :] = def_mesh[i,1]*np.sin(angles)
+
+    file_path = os.path.join(main_folder, static_folder, file_name)
+
+    #Write file inside the folder
+    with open(file_path, 'w') as file:
+        file.write("TITLE = \"Shell\"\n")
+        file.write("VARIABLES = x, y, z, v, w, theta, es, et, xs, xt, ssd, std, ssf, stf, ss_memb, st_memb, VM_d, VM_f, fsy, fsu\n") 
+        file.write(f"ZONE T=\"deformed\", I={n_nodes:04d} J={divisions:04d}\n")
+        for i in range(0, divisions):
+            for j in range(0, n_nodes):
+                #print(f'{x[j,i]}  {y[j,i]}  {mesh[j,0]}  {strains[j,1]}')
+                file.write(f'{def_x[j,i]:.7e}  {def_y[j,i]:.7e}  {def_mesh[j,0]:.7e}  {u_global[3*j,0]:.7e}  {u_global[3*j+1,0]:.7e}  {u_global[3*j+2,0]:.7e}  {strains[j,0]:.7e}  {strains[j,1]:.7e}  {strains[j,2]:.7e}  {strains[j,3]:.7e}  {tensoes_N[j,0]:.7e}  {tensoes_N[j,1]:.7e}  {tensoes_N[j,2]:.7e}  {tensoes_N[j,3]:.7e}  {tensoes_memb[j,0]:.7e}  {tensoes_memb[j,1]:.7e}  {t_VM[j,0]:.7e}  {t_VM[j,1]:.7e}  {fsy[j]:.7e}  {fsu[j]:.7e}\n')
+    
+
 def nat_freqs(natural_frequencies,main_folder,metric_folder,file_name,show, analysis_folder):
     
     modes_graph = 10
@@ -1541,7 +1570,7 @@ def nat_freqs(natural_frequencies,main_folder,metric_folder,file_name,show, anal
 
     # Adding labels with coordinates (modes, natural frequency)
     for mode, freq in zip(modes_to_show, frequencies_to_show):
-        plt.text(mode, float(freq), f'{float(freq):.5f}', fontsize=8, ha='center', va='bottom', color='black')
+        plt.text(mode, float(freq), f'{float(freq):.2f}', fontsize=8, ha='center', va='bottom', color='black')
 
     # Save the plot
     plt.savefig(plot_path)
@@ -1570,6 +1599,7 @@ geometry_plot(mesh,rev_degrees,main_folder,geometry_photo, show)
 
 #Tecplot data exporter for 3D
 tecplot_exporter('output_export_tecplot_3d.txt', rev_points, mesh, u_global, strains, tensoes_N, tensoes_memb, t_VM, fsy, fsu)
+tec_export_defor('output_export_tecplot_3d_deformed.txt', rev_points, mesh, u_global, strains, tensoes_N, tensoes_memb, t_VM, fsy, fsu)
 
 #Graphs
 

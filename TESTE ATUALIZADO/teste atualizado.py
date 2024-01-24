@@ -4,6 +4,13 @@ import matplotlib.pyplot as plt
 import math
 import scipy as sp
 
+# Ignorar o aviso específico
+warnings.filterwarnings("ignore", message="The behavior of DataFrame concatenation with empty or all-NA entries is deprecated.*")
+warnings.filterwarnings("ignore", message="Conversion of an array with ndim > 0 to a scalar is deprecated.*")
+warnings.filterwarnings("ignore", message="Casting complex values to real discards the imaginary part.*")
+
+ti_analise = time.time()
+
 def Mesh_Properties():
 
     # Number of Points to read
@@ -28,38 +35,16 @@ def Mesh_Properties():
 
     df_mat      = pd.read_excel('Livro1.xlsx', sheet_name = 'Materials', usecols = matcols, nrows = 7)
     
-
-    
-    
-    
-    
-   
-    
-    
-    
-    
-    
-    
-    
     # Matrix with the properties of the materials
     material = np.array(df_mat.values)
-    
-    #print(material)
-    
-  
-
 
     # Creates a DataFrame with the same columns, but with no values
     empty_df        = pd.DataFrame(np.nan, index=[0], columns = df_read)
-
-
-    #print(empty_df)
     
     #The first point can't be (0,0) due to mathematical issues
     if df.loc[0, 'r'] == 0:
 
         df.loc[0, 'r']  =  df.loc[0, 'r'] + 10**(-6) 
-
 
     # Adding a point due to the discontinuity, regarding the geometry:
     # helps on interpolation
@@ -135,7 +120,7 @@ def Mesh_Properties():
         #Normalizar o vetor        
         #Calcular o ponto e adicionar ao DataFrame
         
-    if 1==1: ################## A alterar, para variar com os dados inseridos no excel
+    if 1==0: ################## A alterar, para variar com os dados inseridos no excel
         i = 0
         while i < (len(df['Points'])):
             
@@ -212,7 +197,7 @@ def Mesh_Properties():
     df[columns_interpolate] = df[columns_interpolate].interpolate(method='linear')
     df.loc[len(df)-1, 'thi'] = np.nan 
     
-    if 1==0: ################## A alterar, para variar com os dados inseridos no excel
+    if 1==1: ################## A alterar, para variar com os dados inseridos no excel
         # Interpolation Linear Type
         columns_interpolate     = ['z', 'r']
         df[columns_interpolate] = df[columns_interpolate].interpolate(method='linear')
@@ -224,7 +209,6 @@ def Mesh_Properties():
     # Matriz com as coordenadas dos pontos / Malha
     mesh = np.array(df[['z','r']].values)
     #print(mesh)
-    
     
     # Carregamento para cada nó
     pressure_nodes = np.array(df[['Loading']].values)
@@ -272,8 +256,6 @@ def Mesh_Properties():
         
         j += 1
 
-    #print(Boundary_Conditions)
-
 
 
     # Nome do Vetor construído com os dados da coluna "Value" : u_DOF
@@ -316,7 +298,7 @@ def Mesh_Properties():
             elif df.loc[i+1, 'r'] < df.loc[i, 'r']:
                 vpe.loc[i, 'phi'] = -(math.pi/2)
 
-    #print(vpe)
+  
 
     vpe = np.array(vpe.values)
 
@@ -331,6 +313,7 @@ def Mesh_Properties():
     #print(material)
     #print(vpe)
     
+  
 
     ################### Static - Loading
     
@@ -366,7 +349,7 @@ def Mesh_Properties():
     
     
     ############################### Dynamic - Loading
-    
+   
     loading_cols = ['t_col', 'PressureCol']
     df_loading  = pd.read_excel('Livro1.xlsx', sheet_name = 'Loading', usecols = loading_cols, nrows = k2 )
     #print(df_loading)
@@ -375,10 +358,9 @@ def Mesh_Properties():
     #print(t_col)
     p_col = np.array(df_loading[['PressureCol']].values) #column vector
     #print(p_col)
-    
+  
     
     return mesh, u_DOF, vpe, material, pressure_nodes, t_col, p_col, f_vect
-
 
 
 #PARTE ALFAGEM
@@ -457,7 +439,10 @@ def Kestacked(ne:int, vpe, mat, ni:int, simpson=True) -> np.ndarray: # Incoehere
             integrand = lambda s: Bmatrix(s1_(s),i,r(s),phi, vpe).T@D@Bmatrix(s1_(s),i,r(s),phi, vpe)*(r(s))
             ke = 2*np.pi*h*((5/9)*integrand(-np.sqrt(3/5))+(8/9)*integrand(0)+(5/9)*integrand(np.sqrt(3/5)))
             #print(ke)
+        #if_sym = np.allclose(ke, ke.T)
+        #print('ke:', if_sym)
         kes[:,:,i] = ke
+  
         
     return kes
 
@@ -476,13 +461,13 @@ def k_global(ne:int, vpe, mat, ni=1200, sparse=False) -> np.ndarray:
         #print(row)
         #print(column)
         #print(data)
-        k_globalM = sp.sparse.bsr_array((data, (row, column)), shape=(3*(ne+1), 3*(ne+1)))#.toarray()     
+        k_globalM = sp.sparse.bsr_array((data, (row, column)), shape=(3*(ne+1), 3*(ne+1)))#.toarray() 
+        
     else:
         k_globalM = np.zeros((3*(ne+1), 3*(ne+1)), dtype='float64')
-        for i in range(0,ne):
-
+        for i in range(0, ne):
             k_globalM[3*i:3*i+6,3*i:3*i+6] = k_globalM[3*i:3*i+6,3*i:3*i+6] + kes[:,:,i]
-    
+
     return k_globalM
     #print(f'Element {i+1}')
     #for j in range(0, 3*(ne+1)):
@@ -565,11 +550,12 @@ def FS(displacements, vpe, mat, VM, tensões_N):     #FSy - deformação plastic
     FSU = np.empty((ne+1))
     for i in range(ne):
         if von_mises[i] == 0:
-            FSy[i] = 10
+            FSy[i] = 2
         else:
             FSy[i] = mat[3, int(vpe[i, 4]) - 1] / von_mises[i]  
-        FSc = 10**6
+        FSc = 2
         FSt = FSc
+        
         if np.any(tensões_N[i,:] < 0):
             FSc = mat[5, int(vpe[i,4])-1] / np.min(tensões_N[i,:])
             #print(min(tensões_N[i,:]))
@@ -579,14 +565,16 @@ def FS(displacements, vpe, mat, VM, tensões_N):     #FSy - deformação plastic
         if np.abs(FSt) < np.abs(FSc):
             FSU[i] = FSt
             #print(FSt)
+        #if np.any(tensões_N[i+1,:] == 0):
+            #fsu = 10
         else:
             FSU[i] = FSc
             #print(FSc)
     if von_mises[i+1] == 0:
-        FSy[i+1] = 10
+        FSy[i+1] = 2
     else:
         FSy[i+1] = mat[3, int(vpe[i, 4]) - 1] / von_mises[i+1]  
-    FSc = 10**6
+    FSc = 2
     FSt = FSc
     if np.any(tensões_N[i+1,:] < 0):
         FSc = mat[5, int(vpe[i,4])-1] / np.min(tensões_N[i+1,:])
@@ -600,6 +588,8 @@ def FS(displacements, vpe, mat, VM, tensões_N):     #FSy - deformação plastic
     else:
         FSU[i+1] = FSc
         #print(FSc)
+    #if np.any(tensões_N[i+1,:] == 0):
+        #fsu = 10
     return FSy, FSU
 '''
 0-Density [kg/m^3]
@@ -613,27 +603,6 @@ def FS(displacements, vpe, mat, VM, tensões_N):     #FSy - deformação plastic
 
 #QUITÉRIO
 #CARREGAMENTO
-#vetor carregamento (mesh também)
-def loading(ne: int, vpe, pressure) -> None:  # To be verified
-    load_vct = np.zeros(3 * (ne + 1))
-    for i in range(0, ne):
-        phi = vpe[i, 1]
-        ri = vpe[i, 0]
-        hi = vpe[i, 2]
-        p = pressure[i]
-        #print(phi, ri, hi, p)
-        v_carr = np.zeros(6)
-        A11 = 0.5 * ri * (-np.sin(phi)) - (3 / 20) * np.sin(phi) ** 2 * hi
-        A12 = 0.5 * ri * np.cos(phi) + (3 / 20) * np.sin(phi) * np.cos(phi) * hi
-        A13 = hi * ((1 / 12) * ri + (1 / 30) * hi * np.sin(phi))
-        A14 = 0.5 * ri * (-np.sin(phi)) - (7 / 20) * hi * np.sin(phi) ** 2
-        A15 = 0.5 * ri * np.cos(phi) + (7 / 20) * hi * np.sin(phi) * np.cos(phi)
-        A16 = hi * (-(1 / 12) * ri - (1 / 20) * hi * np.sin(phi))
-        v_carr = 2*np.pi*hi*p*np.array([A11, A12, A13, A14, A15, A16])
-        
-        load_vct[3 * i:3 * i + 6] = load_vct[3 * i:3 * i + 6] + v_carr
-
-    return load_vct
 
 #carregamento dinâmico
 def func_carr_t (funcoes, A, B, w, b, t_final, pi, util, t_col, p_col):
@@ -733,7 +702,6 @@ def load_p(vpe, ne, P, pressure_nodes):
 
     max = np.amax(pressure_nodes)
     pressure_nodes1 = np.zeros(np.size(pressure_nodes))
-    #print(pressure_nodes)
     for i in range(0, ne+1):
         pressure_nodes1[i] = pressure_nodes[i] / max * P
     #pressão media
@@ -757,7 +725,7 @@ def load_p(vpe, ne, P, pressure_nodes):
         v_carr = 2 * np.pi * hi * p * np.array([A11, A12, A13, A14, A15, A16])
 
         load_vct[3 * i:3 * i + 6] = load_vct[3 * i:3 * i + 6] + v_carr
-    load_vct = np.reshape(load_vct,(-1,1))
+
     return load_vct
 
     
@@ -783,6 +751,8 @@ def Mestacked(ne:int, vpe, mat, ni:int, simpson=True) -> np.ndarray:
 
             me = rho*t*2*sp.pi*h*sp.integrate.simpson(I, x=None, dx=1/ni, axis=-1)
         #print('The mass matrix is:\n', me)
+        #if_sym2 = np.allclose(me, me.T)
+        #print('me:', if_sym2)
         mes[:,:,i] = me
     return mes
 
@@ -805,7 +775,9 @@ def m_global(ne:int, vpe, mat, ni=1200, sparse=False) -> np.ndarray:
     else:
         m_globalM = np.zeros((3*(ne+1), 3*(ne+1)), dtype='float64')
         for i in range(0,ne):
-            m_globalM[3*i:3*i+6,3*i:3*i+6] = m_globalM[3*i:3*i+6,3*i:3*i+6] + mes[:,:,i]
+           m_globalM[3*i:3*i+6,3*i:3*i+6] = m_globalM[3*i:3*i+6,3*i:3*i+6] + mes[:,:,i]
+            
+    
     return m_globalM
 
 #def modal_analysis(ne, vpe, u_DOF, mat, ni=1200, sparse=False, is_called_from_dynamic=False):
@@ -817,6 +789,10 @@ def m_global(ne:int, vpe, mat, ni=1200, sparse=False) -> np.ndarray:
     else:
         ModalSolver(k_global,m_global, u_DOF)
     output = np.array[eig_vals,eig_vect]
+
+#def modal(eig_vals):
+    natfreq = np.sort(np.sqrt(eig_vals))
+    return natfreq
 
 
 #ESTEVES
@@ -831,8 +807,6 @@ def c_global(k_globalM, m_globalM, mode1:float, mode2:float, zeta1=0.08, zeta2=0
 
     c_globalM = alfa*m_globalM + beta*k_globalM
     return c_globalM
-
-
 
 #SOLUÇÃO
 
@@ -891,21 +865,20 @@ def StaticSolver(k:np.ndarray, f:np.ndarray, u_DOF:np.ndarray):
 def ModalSolver(k:np.ndarray, m:np.ndarray, u_DOF:np.ndarray):
 
     #Reduce stiffness and mass matrices
-    k_red = RedMatrix(k, u_DOF)
-    k_redf = pd.DataFrame(k_red)                                 #converter pra dataframe
-    k_redf.to_excel('k_red.xlsx', index=False)                       #guardar DF no excel   
+    
+    
+    k_red = RedMatrix(k, u_DOF)          
     m_red = RedMatrix(m, u_DOF)
-    m_redf = pd.DataFrame(m_red)                                 #converter pra dataframe
-    m_redf.to_excel('m_red.xlsx', index=False)                       #guardar DF no excel   
+    
     #Solve the eigenvalue problem
     '''
     a = np.linalg.inv(m_red) @ k_red
-    eig_vals, eig_vect = np.linalg.eigh(a)
-    print("metodo1\n",eig_vals)
-    #print("vetores proprios v1:\n",eig_vect)
+    eig_vals, eig_vect = np.linalg.eig(a)
+    print(eig_vals)
+    print("vetores proprios v1:\n",eig_vect)
     '''
     eig_vals, eig_vect = sp.linalg.eig(k_red, m_red)
-    print("metodo2\n",eig_vals)
+    
     #filter the results
     eig_vals = np.array(eig_vals,dtype=float)
     i=int(len(eig_vals)-1)
@@ -923,8 +896,8 @@ def ModalSolver(k:np.ndarray, m:np.ndarray, u_DOF:np.ndarray):
 
     #sort values 
     guide_vect = np.argsort(eig_vals)
-    eig_vals1 = np.sqrt(eig_vals)
-    natfreq = np.sort(eig_vals1)
+    natfreq = np.sort(np.sqrt(eig_vals))/(2*np.pi)
+
     #sort vector
     new_mtx = np.zeros((len(eig_vect),len(guide_vect)))
     n=0
@@ -933,6 +906,7 @@ def ModalSolver(k:np.ndarray, m:np.ndarray, u_DOF:np.ndarray):
         n += 1
     eig_vect = new_mtx
 
+    #print('Valores Próprios:', natfreq)
     return natfreq, eig_vect
 
 #Dinamic Solution:

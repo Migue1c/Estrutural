@@ -483,19 +483,6 @@ def k_global(ne:int, vpe, mat, ni=1200, sparse=False) -> np.ndarray:
         for i in range(0, ne):
             k_globalM[3*i:3*i+6,3*i:3*i+6] = k_globalM[3*i:3*i+6,3*i:3*i+6] + kes[:,:,i]
 
-    lines = k_globalM.shape[0]
-    columns = k_globalM.shape[1]
-    
-    tolerance = 10**(-6)
-    
-    for i in range(lines):
-        for j in range(columns):
-            if k_globalM[i,j] < tolerance:
-                k_globalM[i,j] = 0
-
-    if_sym = np.allclose(k_globalM, k_globalM.T)
-    print('kglobal:', if_sym)
-
     return k_globalM
     #print(f'Element {i+1}')
     #for j in range(0, 3*(ne+1)):
@@ -1028,16 +1015,16 @@ fsy, fsu = FS(u_global, vpe, material, t_VM, stress)                            
 
 #Modal Analisys
 #M Matrix
-m_gl = m_global(len(vpe), vpe, material, ni=1200, sparse=False)#calculo matriz M
+m_gl = m_global(len(vpe), vpe, material, ni=1200, sparse=False) #calculo matriz M
 #if_sym = np.allclose(m_gl, m_gl.T)
 #print('globalM:', if_sym)
 #m_df = pd.DataFrame(m_gl)                                      #converter pra dataframe
 #print('M:\n',m_df)
-#m_df.to_excel('m.xlsx', index=False)                        #guardar DF no excel
+#m_df.to_excel('m.xlsx', index=False)                           #guardar DF no excel
 #print(m)
 
 #Solution & Modal Post Process
-natfreq, eig_vect = ModalSolver(k, m_gl, u_DOF)               #calculo valores e vetores próprios
+natfreq, eig_vect = ModalSolver(k, m_gl, u_DOF)                 #calculo valores e vetores próprios
 #print("valores proprios:\n",natfreq)                      
 #print("vetores proprios:\n",eig_vect)                   
 #print("freq. natural 1:\n",natfreq1)
@@ -1047,8 +1034,8 @@ natfreq, eig_vect = ModalSolver(k, m_gl, u_DOF)               #calculo valores e
 #Dynamic Analysis
 #C Matrix
 c = c_global(k, m_gl, natfreq[0], natfreq[1])                   #calculo matriz C
-#c_df = pd.DataFrame(c)                                      #converter pra dataframe
-#c_df.to_excel('c.xlsx', index=False)                        #guardar DF no excel
+#c_df = pd.DataFrame(c)                                         #converter pra dataframe
+#c_df.to_excel('c.xlsx', index=False)                           #guardar DF no excel
 #print(c)
 
 #DinamicSolver(m:np.ndarray, c:np.ndarray, k:np.ndarray, f:np.ndarray, x_0:np.ndarray, x_0_d:np.ndarray, u_DOF:np.ndarray, tk:float, delta_t:float, t_final:float, loading, t_col, P_col)
@@ -1457,7 +1444,7 @@ def teplot_exporter_2d(file_name, t_col, u_global_native, strains, stress, stres
 
 def nat_freqs(natural_frequencies,main_folder,metric_folder,file_name,show, analysis_folder):
     
-    modes_graph = 6
+    modes_graph = 10
 
     modes_number = len(natural_frequencies)
     modes = [i + 1 for i in range(modes_number)]

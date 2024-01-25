@@ -20,28 +20,29 @@ warnings.filterwarnings("ignore", message="Casting complex values to real discar
 ti_analise = time.time()
 
 def Mesh_Properties():
-
+    
+    file_name = 'Livro1.xlsx'
     # Number of Points to read
-    df_num_rows  = pd.read_excel('Livro1.xlsx', sheet_name = 'Input', usecols = ['NumRowsRead'], nrows = 1)
+    df_num_rows  = pd.read_excel(file_name, sheet_name = 'Input', usecols = ['NumRowsRead'], nrows = 1)
     k            = int(df_num_rows.loc[0, 'NumRowsRead'])
 
     #Materials to read
-    df_matcols  = pd.read_excel('Livro1.xlsx', sheet_name = 'Materials', usecols = [0], nrows = 1)
+    df_matcols  = pd.read_excel(file_name, sheet_name = 'Materials', usecols = [0], nrows = 1)
     m           = int(df_matcols.iloc[0, 0])
     matcols     = list(range(3, 3 + m))
     
     # Number of lines to read, for the loading
-    df_loading_read = pd.read_excel('Livro1.xlsx', sheet_name = 'Loading', usecols = ['READ'], nrows = 1)
+    df_loading_read = pd.read_excel(file_name, sheet_name = 'Loading', usecols = ['READ'], nrows = 1)
     k2              = int(df_loading_read.loc[0, 'READ'])
     
 
     # Reading the Input Data / Creating DataFrames
     df_read     = ['Points','z','r','thi','Conditions','Material','Conditions1','Nn', 'Loading', 'Discontinuity'] 
-    df          = pd.read_excel('Livro1.xlsx', sheet_name = 'Input', usecols = df_read, nrows = k) 
+    df          = pd.read_excel(file_name, sheet_name = 'Input', usecols = df_read, nrows = k) 
                                                                                     
-    df_info     = pd.read_excel('Livro1.xlsx', sheet_name = 'Input', usecols = ['Discontinuity'], nrows = k)
+    df_info     = pd.read_excel(file_name, sheet_name = 'Input', usecols = ['Discontinuity'], nrows = k)
 
-    df_mat      = pd.read_excel('Livro1.xlsx', sheet_name = 'Materials', usecols = matcols, nrows = 7)
+    df_mat      = pd.read_excel(file_name, sheet_name = 'Materials', usecols = matcols, nrows = 7)
     
     # Matrix with the properties of the materials
     material = np.array(df_mat.values)
@@ -49,11 +50,14 @@ def Mesh_Properties():
     # Creates a DataFrame with the same columns, but with no values
     empty_df        = pd.DataFrame(np.nan, index=[0], columns = df_read)
     
+    #print(df)
+    
     #The first point can't be (0,0) due to mathematical issues
     if df.loc[0, 'r'] == 0:
 
         df.loc[0, 'r']  =  df.loc[0, 'r'] + 10**(-6) 
 
+    """
     # Adding a point due to the discontinuity, regarding the geometry:
     # helps on interpolation
     i=0
@@ -87,6 +91,7 @@ def Mesh_Properties():
             df.loc[i,'Nn'] = 0
 
         i += 1
+    """
 
     # Adding empty rows, with the number of nodes necessary to have the number of elements specified by the user 
     i = 0
@@ -127,8 +132,11 @@ def Mesh_Properties():
         #Calcular o vetor de direção entre os nós iniciais
         #Normalizar o vetor        
         #Calcular o ponto e adicionar ao DataFrame
-        
-    if 1==1: ################## A alterar, para variar com os dados inseridos no excel
+    ## Mesh Type
+    df_mesh_type = pd.read_excel(file_name, sheet_name = 'Input', usecols = ['Mesh Type'], nrows = 1)
+    k5              = int(df_mesh_type.loc[0, 'Mesh Type'])
+    
+    if k5==1: ################## A alterar, para variar com os dados inseridos no excel
         i = 0
         while i < (len(df['Points'])):
             
@@ -205,7 +213,7 @@ def Mesh_Properties():
     df[columns_interpolate] = df[columns_interpolate].interpolate(method='linear')
     df.loc[len(df)-1, 'thi'] = np.nan 
     
-    if 1==0: ################## A alterar, para variar com os dados inseridos no excel
+    if k5==0: ################## A alterar, para variar com os dados inseridos no excel
         # Interpolation Linear Type
         columns_interpolate     = ['z', 'r']
         df[columns_interpolate] = df[columns_interpolate].interpolate(method='linear')
@@ -359,7 +367,7 @@ def Mesh_Properties():
     ############################### Dynamic - Loading
    
     loading_cols = ['t_col', 'PressureCol']
-    df_loading  = pd.read_excel('Livro1.xlsx', sheet_name = 'Loading', usecols = loading_cols, nrows = k2 )
+    df_loading  = pd.read_excel(file_name, sheet_name = 'Loading', usecols = loading_cols, nrows = k2 )
     #print(df_loading)
     
     t_col = np.array(df_loading[['t_col']].values)  #column vector
@@ -560,10 +568,10 @@ def FS(displacements, vpe, mat, VM, tensões_N):     #FSy - deformação plastic
     FSU = np.empty((ne+1))
     for i in range(ne):
         if von_mises[i] == 0:
-            FSy[i] = 2
+            FSy[i] = 10
         else:
             FSy[i] = mat[3, int(vpe[i, 4]) - 1] / von_mises[i]  
-        FSc = 2
+        FSc = 10
         FSt = FSc
         
         if np.any(tensões_N[i,:] < 0):
@@ -581,10 +589,10 @@ def FS(displacements, vpe, mat, VM, tensões_N):     #FSy - deformação plastic
             FSU[i] = FSc
             #print(FSc)
     if von_mises[i+1] == 0:
-        FSy[i+1] = 2
+        FSy[i+1] = 10
     else:
         FSy[i+1] = mat[3, int(vpe[i, 4]) - 1] / von_mises[i+1]  
-    FSc = 2
+    FSc = 10
     FSt = FSc
     if np.any(tensões_N[i+1,:] < 0):
         FSc = mat[5, int(vpe[i,4])-1] / np.min(tensões_N[i+1,:])

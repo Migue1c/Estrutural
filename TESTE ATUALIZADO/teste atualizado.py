@@ -1091,16 +1091,16 @@ mesh, u_DOF, vpe, material, pressure_nodes, t_col, p_col, f_vect = Mesh_Properti
 
 #ANÁLISE ESTÁTICAs
 #MATRIZ K
-k = k_global(len(vpe), vpe, material)                       #calculo matriz K
-#k_df = pd.DataFrame(k)                                     #converter pra dataframe
-#k_df.to_excel('k.xlsx', index=False)                       #guardar DF no excel
+k = k_global(len(vpe), vpe, material)                           #calculo matriz K
+#k_df = pd.DataFrame(k)                                         #converter pra dataframe
+#k_df.to_excel('k.xlsx', index=False)                           #guardar DF no excel
 
 #SOLUÇÃO E POS-PROCESSAMENTO ESTÁTICA
-u_global = StaticSolver(k, f_vect, u_DOF)                   #calculo dos deslocamentos
+u_global = StaticSolver(k, f_vect, u_DOF)                       #calculo dos deslocamentos
 #print("vetor deslocamentos:\n",u_global)               
 strains, tensoes_N, tensoes_memb = calculate_strains_stresses(u_global, vpe, material)    #calculo das extensões e tensões diretas (e_s, e_th, x_s, x_th)
-t_VM = tensões_VM(u_global, vpe, tensoes_N)                 #calculo das tensões de von-misses (t_s_d, t_th_d, t_s_f, t_th_f)
-fsy, fsu = FS(u_global, vpe, material, t_VM, tensoes_N)     #calculo dos fatores de segurança (fsy-cedencia, fsu-rutura)
+t_VM = tensões_VM(u_global, vpe, tensoes_N)                     #calculo das tensões de von-misses (t_s_d, t_th_d, t_s_f, t_th_f)
+fsy, fsu = FS(u_global, vpe, material, t_VM, tensoes_N)         #calculo dos fatores de segurança (fsy-cedencia, fsu-rutura)
 #print("strains:\n",strains)
 #print("tensões:\n",tensoes_N)
 #print("tensões membrana:\n",tensoes_memb)
@@ -1110,13 +1110,13 @@ fsy, fsu = FS(u_global, vpe, material, t_VM, tensoes_N)     #calculo dos fatores
 
 #ANÁLISE MODAL
 #MATRIZ M
-m_gl = m_global(len(vpe), vpe, material, ni=1200, sparse=False)#calculo matriz M
+m_gl = m_global(len(vpe), vpe, material, ni=1200, sparse=False) #calculo matriz M
 #m_df = pd.DataFrame(m_gl)                                      #converter pra dataframe
-#m_df.to_excel('m.xlsx', index=False)                        #guardar DF no excel
+#m_df.to_excel('m.xlsx', index=False)                           #guardar DF no excel
 #print(m)
 
 #SOLUÇÃO E POS-PROCESSAMENTO MODAL
-natfreq, eig_vect, freq1, freq2 = ModalSolver(k, m_gl, u_DOF)              #calculo valores e vetores próprios
+natfreq, eig_vect, freq1, freq2 = ModalSolver(k, m_gl, u_DOF)   #calculo valores e vetores próprios
 #print("valores proprios:\n",natfreq)                      
 #print("vetores proprios:\n",eig_vect)                   
 #print("freq. natural 1:\n",natfreq[0])
@@ -1125,19 +1125,19 @@ natfreq, eig_vect, freq1, freq2 = ModalSolver(k, m_gl, u_DOF)              #calc
 
 #ANÁLISE DINÂMICA
 #MATRIZ C
-c = c_global(k, m_gl, freq1, freq2)                 #calculo matriz C
-#c_df = pd.DataFrame(c)                                       #converter pra dataframe
-#c_df.to_excel('c.xlsx', index=False)                         #guardar DF no excel
+c = c_global(k, m_gl, freq1, freq2)                             #calculo matriz C
+#c_df = pd.DataFrame(c)                                         #converter pra dataframe
+#c_df.to_excel('c.xlsx', index=False)                           #guardar DF no excel
 #print(c)
 
 matrix_u, matrix_ud, matrix_ud2 = DynamicSolverV2(k, m_gl, c, u_DOF, t_col, p_col, vpe, len(vpe), pressure_nodes)
 
-m_u_df = pd.DataFrame(matrix_u)                                #converter pra dataframe
-m_u_df.to_excel('u.xlsx', index=False)                         #guardar DF no excel
+m_u_df = pd.DataFrame(matrix_u)                                 #converter pra dataframe
+m_u_df.to_excel('u.xlsx', index=False)                          #guardar DF no excel
 print(m_u_df)
-m_ud_df = pd.DataFrame(matrix_ud)                                #converter pra dataframe
-m_ud_df.to_excel('ud.xlsx', index=False)                         #guardar DF no excel
+m_ud_df = pd.DataFrame(matrix_ud)                               #converter pra dataframe
+m_ud_df.to_excel('ud.xlsx', index=False)                        #guardar DF no excel
 print(m_ud_df)
-m_ud2_df = pd.DataFrame(matrix_ud2)                                #converter pra dataframe
-m_ud2_df.to_excel('ud2.xlsx', index=False)                       #guardar DF no excel
+m_ud2_df = pd.DataFrame(matrix_ud2)                             #converter pra dataframe
+m_ud2_df.to_excel('ud2.xlsx', index=False)                      #guardar DF no excel
 print(m_ud2_df)

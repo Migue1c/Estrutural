@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import Normalize
 import matplotlib.colors as mcolors
 from mpl_toolkits.mplot3d import Axes3D
+import matplotlib.gridspec as gridspec
 import os
 import warnings
 import time
@@ -796,8 +797,7 @@ def m_global(ne:int, vpe, mat, ni=1200, sparse=False) -> np.ndarray:
     natfreq = np.sort(np.sqrt(eig_vals))
     return natfreq
 
-#Dinamic Analysis
-
+#Dynamic Analysis
 def c_global(k_globalM, m_globalM, mode1:float, mode2:float, zeta1=0.08, zeta2=0.08):
     # Pressuposes that the global matrices k_globalM and m_globalM are already reduced
 
@@ -807,6 +807,34 @@ def c_global(k_globalM, m_globalM, mode1:float, mode2:float, zeta1=0.08, zeta2=0
 
     c_globalM = alfa*m_globalM + beta*k_globalM
     return c_globalM
+
+#Dynamiic Post Process
+def dyn_post_proc(displacements, vpe, material):
+    # Getting number of nodes and instants of time
+    n_nodes = len(vpe) + 1
+    time_instas = displacements.shape[1]
+
+    # Initializing empty variables
+    strains_3 = np.empty((n_nodes, 4, time_instas))
+    stress_3 = np.empty((n_nodes, 4, time_instas))
+    stress_memb_3 = np.empty((n_nodes, 2, time_instas))
+    t_VM = np.empty((n_nodes, 2, time_instas))
+    fsy = np.empty((n_nodes, 1, time_instas))
+    fsu = np.empty((n_nodes, 1, time_instas))
+
+    # Filling them with values for each instant of the dynamic simulation
+    for j in range(0,time_instas):      # for each displacement column, aka each time instant
+        strain, stress, stress_memb = calculate_strains_stresses(displacements, vpe, material)
+        strains_3[:,:,j] = strain        # strains
+        stress_3[:,:,j] = stress       # direct stresses inside/outside of shell
+        stress_memb_3[:,:,j] = stress_memb     # direct membrane stresses, direct stresses in midle plane
+        t_VM[:,:,j] = stress_VM(displacements, vpe, stress)      # von Mises stresses inside/outside
+        fsy[:,0,j], fsu[:,0,j] = FS(displacements, vpe, material, t_VM[:,:,j], stress)     # yield safety factor, ultimate safety factor
+
+
+
+    return strains_3, stress_3, stress_memb_3, t_VM, fsy, fsu
+
 
 #Solution
 
@@ -865,8 +893,6 @@ def StaticSolver(k:np.ndarray, f:np.ndarray, u_DOF:np.ndarray):
 def ModalSolver(k:np.ndarray, m:np.ndarray, u_DOF:np.ndarray):
 
     #Reduce stiffness and mass matrices
-    
-    
     k_red = RedMatrix(k, u_DOF)          
     m_red = RedMatrix(m, u_DOF)
     
@@ -982,6 +1008,7 @@ def DinamicSolver(m:np.ndarray, c:np.ndarray, k:np.ndarray, f:np.ndarray, u_DOF:
     return matrix_u, matrix_ud, matrix_ud2
 
 
+
 #############################################################################################################################################
 #############################################################################################################################################
 #############################################################################################################################################
@@ -1039,6 +1066,11 @@ c = c_global(k, m_gl, natfreq[0], natfreq[1])                   #calculo matriz 
 #print(c)
 
 #DinamicSolver(m:np.ndarray, c:np.ndarray, k:np.ndarray, f:np.ndarray, x_0:np.ndarray, x_0_d:np.ndarray, u_DOF:np.ndarray, tk:float, delta_t:float, t_final:float, loading, t_col, P_col)
+
+u_global_d = u_global
+u_global_matrix = np.tile(u_global_d, (1, 10)).reshape(len(u_global_d), -1)
+
+strains_d, stress_d, stress_memb_d, t_VM_d, fsy_d, fsu_d = dyn_post_proc(u_global_matrix, vpe, material)
 
 tf_analise = time.time()
 
@@ -1367,7 +1399,7 @@ def files (file_name, metric_vect, main_folder, metric_folder,analysis_folder,po
             formatted_point = "{:.3f}".format(point)  # Formata o ponto para ter no máximo 3 casas decimais
             file.write(f'{formatted_point} {metric_value}\n')
 
-def tecplot_exporter(file_name,rev_angle, divisions, mesh, u_global, strains, stress, stress_memb, t_VM, fsy, fsu, deformation):
+def tecplot_exporter(file_path,rev_angle, divisions, mesh, u_global, strains, stress, stress_memb, t_VM, fsy, fsu, deformation):
     
     if deformation != 0:
         n_nodes = len(mesh)
@@ -1379,10 +1411,7 @@ def tecplot_exporter(file_name,rev_angle, divisions, mesh, u_global, strains, st
         def_mesh[:,0] += u_global[0::3,0]
         def_mesh[:,1] += u_global[1::3,0]
 
-    main_folder = "FEM Analysis - Data"
-    static_folder = 'Static Analysis'
-
-    rev_angle = math.radians(rev_degrees)
+    rev_angle = math.radians(rev_angle)
     n_nodes = len(mesh)
     angles = np.linspace(0, rev_angle , divisions, endpoint=True)
 
@@ -1391,8 +1420,6 @@ def tecplot_exporter(file_name,rev_angle, divisions, mesh, u_global, strains, st
     for i in range(0, n_nodes):
         x[i, :] = def_mesh[i,1]*np.cos(angles)
         y[i, :] = def_mesh[i,1]*np.sin(angles)
-
-    file_path = os.path.join(main_folder, static_folder, file_name)
 
     #Write file inside the folder
     with open(file_path, 'w') as file:
@@ -1406,11 +1433,17 @@ def tecplot_exporter(file_name,rev_angle, divisions, mesh, u_global, strains, st
         for i in range(0, divisions):
             for j in range(0, n_nodes):
                 file.write(f'{x[j,i]:.7e}  {y[j,i]:.7e}  {mesh[j,0]:.7e}  {u_global[3*j,0]:.7e}  {u_global[3*j+1,0]:.7e}  {u_global[3*j+2,0]:.7e}  {strains[j,0]:.7e}  {strains[j,1]:.7e}  {strains[j,2]:.7e}  {strains[j,3]:.7e}  {stress[j,0]:.7e}  {stress[j,1]:.7e}  {stress[j,2]:.7e}  {stress[j,3]:.7e}  {stress_memb[j,0]:.7e}  {stress_memb[j,1]:.7e}  {t_VM[j,0]:.7e}  {t_VM[j,1]:.7e}  {fsy[j]:.7e}  {fsu[j]:.7e}\n')
+                #file.write(f'{float(x[j,i]):.7e}  {float(y[j,i]):.7e}  {float(mesh[j,0]):.7e}  {float(u_global[3*j,0]):.7e}  {float(u_global[3*j+1,0]):.7e}  {float(u_global[3*j+2,0]):.7e}  {float(strains[j,0]):.7e}  {float(strains[j,1]):.7e}  {float(strains[j,2]):.7e}  {float(strains[j,3]):.7e}  {float(stress[j,0]):.7e}  {float(stress[j,1]):.7e}  {float(stress[j,2]):.7e}  {float(stress[j,3]):.7e}  {float(stress_memb[j,0]):.7e}  {float(stress_memb[j,1]):.7e}  {float(t_VM[j,0]):.7e}  {float(t_VM[j,1]):.7e}  {float(fsy[j]):.7e}  {float(fsu[j]):.7e}\n')
 
 def tecplot_exporter_dynamic(rev_angle, divisions, mesh, u_global, strains, stress, stress_memb, t_VM, fsy, fsu, t_col,  deformation):
-    
-    for i in range(u_global.shape[1]):
-        tecplot_exporter((f'output_tecplot_3d_t_{t_col[i]}s'), divisions, mesh, u_global[:,i], strains[:,:,i], stress[:,:,i], stress_memb[:,:,i], t_VM[:,:,i], fsy[:,:,i], fsu[:,:,i], deformation)
+   if deformation > 0:
+        for i in range(u_global.shape[1]):
+            u = u_global[:,i].reshape((-1,1))
+            tecplot_exporter((f'FEM Analysis - Data\Dynamic Analysis\output_tecplot_3d_t_{t_col[i,0]:.3f}s.txt'),rev_angle, divisions, mesh, u, strains[:,:,i], stress[:,:,i], stress_memb[:,:,i], t_VM[:,:,i], fsy[:,:,i], fsu[:,:,i], deformation)
+    else:
+        for i in range(u_global.shape[1]):
+            u = u_global[:,i].reshape((-1,1))
+            tecplot_exporter((f'FEM Analysis - Data\Dynamic Analysis\output_tecplot_3d_deformed_(t={t_col[i,0]:.3f}s).txt'),rev_angle, divisions, mesh, u, strains[:,:,i], stress[:,:,i], stress_memb[:,:,i], t_VM[:,:,i], fsy[:,:,i], fsu[:,:,i], deformation)
 
 def teplot_exporter_2d(file_name, t_col, u_global_native, strains, stress, stress_memb, t_VM, fsy, fsu):
     vars = 16
@@ -1442,7 +1475,7 @@ def teplot_exporter_2d(file_name, t_col, u_global_native, strains, stress, stres
             for j in range(0, time_steps):
                 file.write(f'{t_col[j]:.7e}  {data_max[j,i]:.7e}\n')     #Confirmar se t_col é apenas um vetor
 
-def nat_freqs(natural_frequencies,main_folder,metric_folder,file_name,show, analysis_folder):
+def nat_freqs(natural_frequencies, main_folder, metric_folder, file_name, show, analysis_folder):
     
     modes_graph = 10
 
@@ -1465,25 +1498,47 @@ def nat_freqs(natural_frequencies,main_folder,metric_folder,file_name,show, anal
     # File path for saving the plot with selected modes
     plot_path = os.path.join(main_folder, analysis_folder, metric_folder, "natural_frequencies_graph.png")
 
-    plt.figure()
-    plt.plot(modes_to_show, frequencies_to_show, marker='o', markersize="5", linestyle='', color='b')
-    plt.xlabel('Vibration Mode')
-    plt.ylabel('Natural Frequency [Hz]')
-    plt.title('Natural Frequencies Graph')
-    plt.grid(True)
+    # Create a subplot grid with reduced horizontal spacing
+    fig = plt.figure(figsize=(12, 6))
+    gs = gridspec.GridSpec(1, 2, width_ratios=[1.5, 0.5], wspace=0.1)  # 2 columns, 1.5:0.5 width ratio, reduced spacing
 
-    # Adding labels with coordinates (modes, natural frequency)
-    for mode, freq in zip(modes_to_show, frequencies_to_show):
-        plt.text(mode, float(freq), f'{float(freq):.2f}', fontsize=8, ha='center', va='bottom', color='black')
+    # Plot the bar chart with increased size for the specified modes
+    ax1 = plt.subplot(gs[0])
+    ax1.bar(modes_to_show, frequencies_to_show, color='r', align='center', alpha=0.7, width=0.2)
+    ax1.set_xlabel('Vibration Mode')
+    ax1.set_ylabel('Natural Frequency [Hz]')
+    ax1.set_title('Natural Frequencies Graph')
+    #ax1.grid(False)
+    ax1.yaxis.grid(True, linestyle='--', which='major', color='grey', alpha=0.5)
+    ax1.xaxis.grid(True, linestyle='--', which='major', color='grey', alpha=0.5)
+    
 
+    # Set ticks to show all modes on the x-axis
+    plt.xticks(modes_to_show)
+
+    # Plot the table with a zoom effect
+    ax2 = plt.subplot(gs[1])
+    ax2.axis('off')  # Turn off the axis for the table
+
+    # Adjust the position of the table to the left
+    table_data = [[f'{mode}', f'{freq:.2f} Hz'] for mode, freq in zip(modes_to_show, frequencies_to_show)]
+    table = ax2.table(cellText=table_data, loc='center left', cellLoc='center', colLabels=['Mode', 'Frequency'], cellColours=[['#f0f0f0']*2]*len(table_data))
+    table.auto_set_font_size(False)
+    table.set_fontsize(11)
+
+    # Zoom effect: Increase the scale of the table
+    table.scale(2, 2)  # Adjust the scale factor as needed
+    table.auto_set_column_width([0, 1])  # Adjust column width
+    
     # Save the plot
-    plt.savefig(plot_path)
+    plt.savefig(plot_path, bbox_inches='tight')
 
     # Show the plot if requested
     if show == 1:
         plt.show()
 
     plt.close()
+
 
 ###################################################################################
 
@@ -1496,8 +1551,12 @@ folders_creator(main_folder,stress_folder,strain_folder,natfreqs_folder,static_f
 #geometry_plot(mesh,rev_degrees,main_folder,geometry_photo, show)
 
 #Tecplot data exporter for 3D (Static)
-tecplot_exporter('output_export_tecplot_3d.txt',rev_degrees, rev_points, mesh, u_global, strains, stress, stress_memb, t_VM, fsy, fsu,0)
-tecplot_exporter('output_export_tecplot_3d_deformed.txt',rev_degrees, rev_points, mesh, u_global, strains, stress, stress_memb, t_VM, fsy, fsu,4)
+tecplot_exporter('FEM Analysis - Data\Static Analysis\output_export_tecplot_3d.txt',rev_degrees, rev_points, mesh, u_global, strains, stress, stress_memb, t_VM, fsy, fsu,0)
+tecplot_exporter('FEM Analysis - Data\Static Analysis\output_export_tecplot_3d.txt_deformed.txt',rev_degrees, rev_points, mesh, u_global, strains, stress, stress_memb, t_VM, fsy, fsu,4)
+
+#Tecplot data exporter for 3D (Dynamic)
+tecplot_exporter_dynamic(rev_degrees, rev_points, mesh, u_global_matrix, strains_d, stress_d, stress_memb_d, t_VM_d, fsy_d, fsu_d, t_col,  0)
+tecplot_exporter_dynamic(rev_degrees, rev_points, mesh, u_global_matrix, strains_d, stress_d, stress_memb_d, t_VM_d, fsy_d, fsu_d, t_col,  4)
 
 
 '''

@@ -721,10 +721,10 @@ def load_p(vpe, ne, P, pressure_nodes):
         v_carr = np.zeros(6)
         A11 = 0.5 * ri * (-np.sin(phi)) - (3 / 20) * np.sin(phi) ** 2 * hi
         A12 = 0.5 * ri * np.cos(phi) + (3 / 20) * np.sin(phi) * np.cos(phi) * hi
-        A13 = 0 #hi * ((1 / 12) * ri + (1 / 30) * hi * np.sin(phi))
+        A13 = hi * ((1 / 12) * ri + (1 / 30) * hi * np.sin(phi))
         A14 = 0.5 * ri * (-np.sin(phi)) - (7 / 20) * hi * np.sin(phi) ** 2
         A15 = 0.5 * ri * np.cos(phi) + (7 / 20) * hi * np.sin(phi) * np.cos(phi)
-        A16 = 0 #hi * (-(1 / 12) * ri - (1 / 20) * hi * np.sin(phi))
+        A16 = hi * (-(1 / 12) * ri - (1 / 20) * hi * np.sin(phi))
         v_carr = 2 * np.pi * hi * p * np.array([A11, A12, A13, A14, A15, A16])
 
         load_vct[3 * i:3 * i + 6] = load_vct[3 * i:3 * i + 6] + v_carr
@@ -896,7 +896,11 @@ def ModalSolver(k:np.ndarray, m:np.ndarray, u_DOF:np.ndarray):
 
     #sort values 
     guide_vect = np.argsort(eig_vals)
-    natfreq = np.sort(np.sqrt(eig_vals))/(2*np.pi)
+    natfreq = np.sort(np.sqrt(eig_vals))
+
+    freq1= natfreq[0]       #used to calculate damping matrix
+    freq2= natfreq[1]
+    natfreq = natfreq/(2*np.pi) #convert to hertz
 
     #sort vector
     new_mtx = np.zeros((len(eig_vect),len(guide_vect)))
@@ -907,7 +911,7 @@ def ModalSolver(k:np.ndarray, m:np.ndarray, u_DOF:np.ndarray):
     eig_vect = new_mtx
 
     #print('Valores Próprios:', natfreq)
-    return natfreq, eig_vect
+    return natfreq, eig_vect, freq1, freq2
 
 #Dinamic Solution:
 #STATIC TEST VERSION ONLY
@@ -935,45 +939,50 @@ def DynamicSolver(k:np.ndarray, m:np.ndarray, c:np.ndarray, u_DOF:np.ndarray, t_
     if method == 0:
         #Average Acceleration Method:
         gamma = 1/2
-        beta =  1/6
+        beta =  1/4
     else:
-        #Linear Acceleration Method:
+        #Linear Acceleration Method:wr 
         gamma = 1/2
-        beta = 1/4
+        beta = 1/6
     
     #time constraints
     l = t_col.shape[0] - 1
     tk = t_col[0,0]
     t_final = t_col[l,0]
     fg = 0
+
     f = load_p(vpe, ne, p_col[fg,0], pressure_nodes)
     f = RedMatrix(f, u_DOF)
+    x_0_d2 = sp.linalg.inv(m) @ (f - (c @ x_0_d ) - (k @ x_0))
+
 
     while tk < t_final :
         
+        #Starting value [x_d2_(0)]
+        #x_0_d2 = sp.linalg.inv(m) @ (f - (c @ x_0_d ) - (k @ x_0))
+
         #Time increment:
         tk0 = tk
         fg += 1
         tk = t_col[fg,0]
-        print(tk)
         delta_t = tk - tk0
+
+        #Force vector for current tk
+        f = load_p(vpe, ne, p_col[fg,0], pressure_nodes)
+        f = RedMatrix(f, u_DOF)
         
         #Prediction:
         x_1_d = x_0_d + (1 - gamma) * delta_t * x_0_d2
         x_1 = x_0 + delta_t * x_0_d + (0.5 - beta)*(delta_t**2) * x_0_d2
         
-        #Force vector for tk+1
-        f = load_p(vpe, ne, p_col[fg,0], pressure_nodes)
-        f = RedMatrix(f, u_DOF)
-
         #Equilibrium eqs.:
         s = m + (gamma * delta_t * c) + (beta * (delta_t**2) * k)
-        x_1_d2 = np.linalg.inv(s) @ (f - (c @ x_0_d) - (k @ x_0) )
-       
+        x_1_d2 = sp.linalg.inv(s) @ (f - (c @ x_0_d) - (k @ x_0) )
+
         #Correction:
         x_1_d = x_1_d + (delta_t * gamma * x_1_d2)
         x_1 = x_1 + ((delta_t**2) * beta * x_1_d2)
- 
+
         #store values in matrices
         matrix_u = np.append(matrix_u, x_1, axis=1)
         matrix_ud = np.append(matrix_ud, x_1_d, axis=1)
@@ -991,8 +1000,9 @@ def DynamicSolver(k:np.ndarray, m:np.ndarray, c:np.ndarray, u_DOF:np.ndarray, t_
 
     return matrix_u, matrix_ud, matrix_ud2
 
-#def DynamicSolver(k:np.ndarray, m:np.ndarray, c:np.ndarray, u_DOF:np.ndarray, t_col, p_col, vpe, ne, pressure_nodes):
 
+
+def DynamicSolverV2(k:np.ndarray, m:np.ndarray, c:np.ndarray, u_DOF:np.ndarray, t_col, p_col, vpe, ne, pressure_nodes):
     #static test only
     #Reduce Matrices
     k = RedMatrix(k, u_DOF)
@@ -1015,46 +1025,43 @@ def DynamicSolver(k:np.ndarray, m:np.ndarray, c:np.ndarray, u_DOF:np.ndarray, t_
     if method == 0:
         #Average Acceleration Method:
         gamma = 1/2
-        beta =  1/6
+        beta =  1/4
     else:
-        #Linear Acceleration Method:
+        #Linear Acceleration Method: 
         gamma = 1/2
-        beta = 1/4
+        beta = 1/6
     
     #time constraints
     l = t_col.shape[0] - 1
     tk = t_col[0,0]
     t_final = t_col[l,0]
     fg = 0
-    
-    while tk < t_final :
-        
-        #Force vector for current tk
-        f = load_p(vpe, ne, p_col[fg,0], pressure_nodes)
-        f = RedMatrix(f, u_DOF)
 
-        #Starting value [x_d2_(0)]
-        x_0_d2 = np.linalg.inv(m) @ (f - (c @ x_0_d ) - (k @ x_0))
+    #Starting acel. value
+    f = load_p(vpe, ne, p_col[fg,0], pressure_nodes)
+    f = RedMatrix(f, u_DOF)
+    x_0_d2 = sp.linalg.inv(m) @ (f - (c @ x_0_d ) - (k @ x_0))
+
+    while tk < t_final :
         
         #Time increment:
         tk0 = tk
         fg += 1
         tk = t_col[fg,0]
         delta_t = tk - tk0
-        
-        #Prediction:
-        x_1_d = x_0_d + (1 - gamma) * delta_t * x_0_d2
-        x_1 = x_0 + delta_t * x_0_d + (0.5 - beta)*(delta_t**2) * x_0_d2
-        
-        #Equilibrium eqs.:
-        s = m + (gamma * delta_t * c) + (beta * (delta_t**2) * k)
-        x_1_d2 = np.linalg.inv(s) @ (f - (c @ x_0_d) - (k @ x_0) )
-       
-        #Correction:
-        x_1_d = x_1_d + (delta_t * gamma * x_1_d2)
-        x_1 = x_1 + ((delta_t**2) * beta * x_1_d2)
-        #print("vetor deslocamentos",fg)
-        #print(x_1)
+
+        #Loading vector for tk
+        f = load_p(vpe, ne, p_col[fg,0], pressure_nodes)
+        f = RedMatrix(f, u_DOF)
+
+        #Stifness form 
+        k_SF = ( 1 / (beta*(delta_t**2))) * m  + ( gamma / (beta * delta_t)) * c + k
+        f_SF = f + (( 1 / (beta*(delta_t**2))) * m  + ( gamma / (beta * delta_t)) * c ) @ x_0 + (( 1 / (beta*delta_t)) * m + ((gamma/beta)-1) * c) @ x_0_d + (((1/(2*beta))-1) * m + (delta_t/2)*((gamma/beta)-2) * c) @ x_0_d2
+        x_1 = np.linalg.solve(k_SF, f_SF)
+
+        x_1_d2 = (1/((delta_t**2)*beta))*(x_1 - x_0 - (delta_t*x_0_d) - ((delta_t**2)*(0.5-beta)*x_0_d2))
+        x_1_d = x_0_d + ((1 - gamma) * delta_t * x_0_d2) + (delta_t * gamma * x_1_d2)
+ 
         #store values in matrices
         matrix_u = np.append(matrix_u, x_1, axis=1)
         matrix_ud = np.append(matrix_ud, x_1_d, axis=1)
@@ -1063,6 +1070,7 @@ def DynamicSolver(k:np.ndarray, m:np.ndarray, c:np.ndarray, u_DOF:np.ndarray, t_
         #reset starting values for next iteration:
         x_0 = x_1
         x_0_d = x_1_d
+        x_0_d2 = x_1_d2
 
     #add lines with zeros to the matrices
     matrix_u = RdfMatrix(matrix_u, u_DOF)
@@ -1108,7 +1116,7 @@ m_gl = m_global(len(vpe), vpe, material, ni=1200, sparse=False)#calculo matriz M
 #print(m)
 
 #SOLUÇÃO E POS-PROCESSAMENTO MODAL
-natfreq, eig_vect = ModalSolver(k, m_gl, u_DOF)              #calculo valores e vetores próprios
+natfreq, eig_vect, freq1, freq2 = ModalSolver(k, m_gl, u_DOF)              #calculo valores e vetores próprios
 #print("valores proprios:\n",natfreq)                      
 #print("vetores proprios:\n",eig_vect)                   
 #print("freq. natural 1:\n",natfreq[0])
@@ -1117,12 +1125,12 @@ natfreq, eig_vect = ModalSolver(k, m_gl, u_DOF)              #calculo valores e 
 
 #ANÁLISE DINÂMICA
 #MATRIZ C
-c = c_global(k, m_gl, natfreq[0], natfreq[1])                 #calculo matriz C
+c = c_global(k, m_gl, freq1, freq2)                 #calculo matriz C
 #c_df = pd.DataFrame(c)                                       #converter pra dataframe
 #c_df.to_excel('c.xlsx', index=False)                         #guardar DF no excel
 #print(c)
 
-matrix_u, matrix_ud, matrix_ud2 = DynamicSolver(k, m_gl, c, u_DOF, t_col, p_col, vpe, len(vpe), pressure_nodes)
+matrix_u, matrix_ud, matrix_ud2 = DynamicSolverV2(k, m_gl, c, u_DOF, t_col, p_col, vpe, len(vpe), pressure_nodes)
 
 m_u_df = pd.DataFrame(matrix_u)                                #converter pra dataframe
 m_u_df.to_excel('u.xlsx', index=False)                         #guardar DF no excel

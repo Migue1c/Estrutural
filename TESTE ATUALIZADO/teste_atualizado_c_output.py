@@ -16,11 +16,13 @@ import threading
 import tkinter as tk
 from tkinter import messagebox
 
-# Ignorar o aviso específico
+#Warnings avoidance
 warnings.filterwarnings("ignore", message="The behavior of DataFrame concatenation with empty or all-NA entries is deprecated.*")
 warnings.filterwarnings("ignore", message="Conversion of an array with ndim > 0 to a scalar is deprecated.*")
 warnings.filterwarnings("ignore", message="Casting complex values to real discards the imaginary part.*")
 
+#Functions
+#User input data function
 def user_input():
     def validate_value():
         try:
@@ -54,15 +56,19 @@ def user_input():
     # Create widgets
     label_show = tk.Label(root, text="Save graphs [0] // Show graphs and save [1]:")
     entry_show = tk.Entry(root)
+    entry_show.insert(0, "0")  # Set default value to 0
 
     label_rev_degrees = tk.Label(root, text="Angle of revolution of axisymmetric geometry [degrees][>0]:")
     entry_rev_degrees = tk.Entry(root)
+    entry_rev_degrees.insert(0, "360")  # Set default value to 360
 
     label_rev_points = tk.Label(root, text="Number of revolution points of axisymmetric geometry [>0]:")
     entry_rev_points = tk.Entry(root)
+    entry_rev_points.insert(0, "250")  # Set default value to 250
 
     label_deformation = tk.Label(root, text="Geometry deformation factor [from 0 to 5]:")
     entry_deformation = tk.Entry(root)
+    entry_deformation.insert(0, "3")  # Set default value to 3
 
     button_confirm = tk.Button(root, text="Confirm", command=validate_value)
 
@@ -91,7 +97,7 @@ def user_input():
     # Return values after the window is closed
     return show, rev_degrees, rev_points, deformation
 
-#Data from file
+#Data from excel file
 def Mesh_Properties():
     
     file_name = 'Livro1.xlsx'
@@ -1165,7 +1171,7 @@ print()
 #############################################################################################################################################
 
 ti_static = time.time()
-print('Static Anlysis -> On')
+print('Static Analysis -> On')
 #Static Analysis
 #K matrix
 k = k_global(len(vpe), vpe, material)                                                           #Compute of K
@@ -1183,7 +1189,7 @@ print()
 #############################################################################################################################################
 
 ti_modal = time.time()
-print('Modal Anlysis -> On')
+print('Modal Analysis -> On')
 
 #Modal Analisys
 #M Matrix
@@ -1199,7 +1205,7 @@ print()
 #############################################################################################################################################
 
 ti_dynamic = time.time()
-print('Dynamic Anlysis -> On')
+print('Dynamic Analysis -> On')
 
 #Dynamic Analysis
 #C Matrix

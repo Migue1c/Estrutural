@@ -1139,10 +1139,10 @@ c = c_global(k, m_gl, freq1, freq2)                             #calculo matriz 
 #c_df.to_excel('c.xlsx', index=False)                           #guardar DF no excel
 #print(c)
 
-matrix_u, t_col_red= DynamicSolverV3(k, m_gl, c, u_DOF, t_col, p_col, vpe, len(vpe), pressure_nodes)
+matrix_u, t_col_red = DynamicSolverV3(k, m_gl, c, u_DOF, t_col, p_col, vpe, len(vpe), pressure_nodes)
 print(t_col_red)
 m_u_df = pd.DataFrame(matrix_u)                                 #converter pra dataframe
-m_u_df.to_excel('u.xlsx', index=False)                          #guardar DF no excel
+#m_u_df.to_excel('u.xlsx', index=False)                          #guardar DF no excel
 print(m_u_df)
 
 

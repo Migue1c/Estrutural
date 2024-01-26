@@ -13,21 +13,85 @@ import os
 import warnings
 import time
 import threading
+import tkinter as tk
+from tkinter import messagebox
 
 # Ignorar o aviso específico
 warnings.filterwarnings("ignore", message="The behavior of DataFrame concatenation with empty or all-NA entries is deprecated.*")
 warnings.filterwarnings("ignore", message="Conversion of an array with ndim > 0 to a scalar is deprecated.*")
 warnings.filterwarnings("ignore", message="Casting complex values to real discards the imaginary part.*")
 
-#Show Graphs?  
-show = 0
+def user_input():
+    def validate_value():
+        try:
+            show_val = int(entry_show.get())
+            rev_degrees_val = float(entry_rev_degrees.get())
+            rev_points_val = int(entry_rev_points.get())
+            deformation_val = float(entry_deformation.get())
 
-#Slice angle to be poltted
-rev_degrees = 360
-rev_points = 250 
+            if show_val in [0, 1] and rev_degrees_val >= 0 and rev_points_val > 0 and 0 <= deformation_val <= 5:
+                # Set return variables
+                nonlocal show, rev_degrees, rev_points, deformation
+                show = show_val
+                rev_degrees = rev_degrees_val
+                rev_points = rev_points_val
+                deformation = deformation_val
 
-ti_analise = time.time()
+                root.destroy()  # Close the window if all values are valid
+            else:
+                messagebox.showerror("Error", "Inserted values are not valid. Check the instructions.")
 
+        except ValueError:
+            messagebox.showerror("Error", "Make sure to insert valid numerical values.")
+
+    # Initialize return variables
+    show = rev_degrees = rev_points = deformation = None
+
+    # Create the main window
+    root = tk.Tk()
+    root.title("Input Data")
+
+    # Create widgets
+    label_show = tk.Label(root, text="Save graphs [0] // Show graphs and save [1]:")
+    entry_show = tk.Entry(root)
+
+    label_rev_degrees = tk.Label(root, text="Angle of revolution of axisymmetric geometry [degrees][>0]:")
+    entry_rev_degrees = tk.Entry(root)
+
+    label_rev_points = tk.Label(root, text="Number of revolution points of axisymmetric geometry [>0]:")
+    entry_rev_points = tk.Entry(root)
+
+    label_deformation = tk.Label(root, text="Geometry deformation factor [from 0 to 5]:")
+    entry_deformation = tk.Entry(root)
+
+    button_confirm = tk.Button(root, text="Confirm", command=validate_value)
+
+    # Position widgets in the window
+    label_show.pack(pady=5)
+    entry_show.pack(pady=5)
+
+    label_rev_degrees.pack(pady=5)
+    entry_rev_degrees.pack(pady=5)
+
+    label_rev_points.pack(pady=5)
+    entry_rev_points.pack(pady=5)
+
+    label_deformation.pack(pady=5)
+    entry_deformation.pack(pady=5)
+
+    button_confirm.pack(pady=10)
+
+    # Start the GUI loop
+    root.mainloop()
+
+    print()
+    print('Starting...')
+    print()
+
+    # Return values after the window is closed
+    return show, rev_degrees, rev_points, deformation
+
+#Data from file
 def Mesh_Properties():
     
     file_name = 'Livro1.xlsx'
@@ -283,10 +347,6 @@ def Mesh_Properties():
 
     load_vct = np.reshape(load_vct,(-1,1))
     f_vect = load_vct
-    
-    
-    
-    
     
     ############################### Dynamic - Loading
     loading_cols = ['t_col', 'PressureCol', 'Add']
@@ -1089,6 +1149,8 @@ def nat_freqs(natural_frequencies, main_folder, metric_folder, file_name, show, 
 
 #############################################################################################################################################
 
+show, rev_degrees, rev_points, deformation = user_input()
+
 print()
 print('File openning -> On')
 ti_mesh = time.time()
@@ -1272,8 +1334,6 @@ files (stress_tf_file, stress_vect_tf, main_folder, stress_folder,static_folder,
 files (stress_membrane_s_file, stress_vect_membrane_s,main_folder, stress_folder,static_folder,mesh)
 files (stress_membrane_t_file, stress_vect_membrane_t,main_folder, stress_folder,static_folder,mesh)
 files (stress_vm_membrane_file,stress_vect_membrane_s,main_folder, stress_folder,static_folder,mesh)
-
-
 files (stress_vm_inside_file,stress_vect_vm_inside, main_folder, stress_folder, static_folder, mesh)
 files (stress_vm_outside_file,stress_vect_vm_outisde, main_folder, stress_folder, static_folder, mesh)
 
@@ -1315,14 +1375,6 @@ print(f"Dynamic Analysis: {round(time_taken_dynamic,2)} seconds")
 print(f"Output: {round(time_taken_output,2)} seconds")
 print(f"Run time: {round(time_total,2)} seconds")
 print()
-
-
-
-
-
-
-
-
 
 #############################################################################################################################################
 

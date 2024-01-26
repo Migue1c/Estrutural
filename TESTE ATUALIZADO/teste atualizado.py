@@ -15,28 +15,25 @@ warnings.filterwarnings("ignore", message="Casting complex values to real discar
 ti_analise = time.time()
 
 def Mesh_Properties():
-
+    
+    file_name = 'Livro1.xlsx'
     # Number of Points to read
-    df_num_rows  = pd.read_excel('Livro1.xlsx', sheet_name = 'Input', usecols = ['NumRowsRead'], nrows = 1)
+    df_num_rows  = pd.read_excel(file_name, sheet_name = 'Input', usecols = ['NumRowsRead'], nrows = 1)
     k            = int(df_num_rows.loc[0, 'NumRowsRead'])
 
     #Materials to read
-    df_matcols  = pd.read_excel('Livro1.xlsx', sheet_name = 'Materials', usecols = [0], nrows = 1)
+    df_matcols  = pd.read_excel(file_name, sheet_name = 'Materials', usecols = [0], nrows = 1)
     m           = int(df_matcols.iloc[0, 0])
     matcols     = list(range(3, 3 + m))
     
     # Number of lines to read, for the loading
-    df_loading_read = pd.read_excel('Livro1.xlsx', sheet_name = 'Loading', usecols = ['READ'], nrows = 1)
+    df_loading_read = pd.read_excel(file_name, sheet_name = 'Loading', usecols = ['READ'], nrows = 1)
     k2              = int(df_loading_read.loc[0, 'READ'])
     
-
     # Reading the Input Data / Creating DataFrames
     df_read     = ['Points','z','r','thi','Conditions','Material','Conditions1','Nn', 'Loading', 'Discontinuity'] 
-    df          = pd.read_excel('Livro1.xlsx', sheet_name = 'Input', usecols = df_read, nrows = k) 
-                                                                                    
-    df_info     = pd.read_excel('Livro1.xlsx', sheet_name = 'Input', usecols = ['Discontinuity'], nrows = k)
-
-    df_mat      = pd.read_excel('Livro1.xlsx', sheet_name = 'Materials', usecols = matcols, nrows = 7)
+    df          = pd.read_excel(file_name, sheet_name = 'Input', usecols = df_read, nrows = k) 
+    df_mat      = pd.read_excel(file_name, sheet_name = 'Materials', usecols = matcols, nrows = 7)
     
     # Matrix with the properties of the materials
     material = np.array(df_mat.values)
@@ -46,47 +43,11 @@ def Mesh_Properties():
     
     #The first point can't be (0,0) due to mathematical issues
     if df.loc[0, 'r'] == 0:
-
         df.loc[0, 'r']  =  df.loc[0, 'r'] + 10**(-6) 
-
-    # Adding a point due to the discontinuity, regarding the geometry:
-    # helps on interpolation
-    i=0
-    while i < (len(df_info['Discontinuity'])):
-
-        if df_info.loc[i, 'Discontinuity' ] == 1:
-
-            df_add1 = pd.DataFrame  ({
-                'Points'        : [df.loc[i, 'Points'] + 0.0001],
-                'z'             : [df.loc[i, 'z'] + 10**(-6)],
-                'r'             : [df.loc[i, 'r']],
-                'thi'           : [df.loc[i+1, 'thi']],
-                'Conditions'    : [df.loc[i, 'Conditions1']],
-                'Nn'            : [df.loc[i, 'Nn']],
-                'Conditions1'   : [df.loc[i, 'Conditions1']],
-                'Material'      : [df.loc[i, 'Material']],
-                'Loading'       : [df.loc[i, 'Loading']],
-                'Discontinuity' : [df.loc[i, 'Discontinuity']]
-                                    })
-            
-            df_add2 = pd.DataFrame  ({
-                'Discontinuity' : [0]
-                                    })
-            
-            result1 = pd.concat([df.iloc[:i+1], df_add1, df.iloc[i+1:]], ignore_index=True)
-            df      = result1
-
-            result2 = pd.concat([df_info.iloc[:i+1], df_add2, df_info.iloc[i+1:]], ignore_index=True)
-            df_info = result2
-
-            df.loc[i,'Nn'] = 0
-
-        i += 1
 
     # Adding empty rows, with the number of nodes necessary to have the number of elements specified by the user 
     i = 0
     while i < (len(df['Nn'])):
-
         if not pd.isna(df.loc[i, 'Nn']) and df.loc[i, 'Nn'] != 0:
             j=0
             while j < df.loc[i, 'Nn' ]:
@@ -94,60 +55,46 @@ def Mesh_Properties():
                 position    = i + 1
                 result      = pd.concat([df.iloc[:position], empty_df, df.iloc[position:]], ignore_index=True)
                 df          = result
-
                 j += 1
-                
         i +=1
 
-    #print(df)
-    
     # Complement information for the New Nodes
     i = 1
     while i < (len(df['Points'])):
-
         if pd.isna(df.loc[i, 'Points']): #If the specified value is NaN
-
             df.loc[i, 'Points']         = df.loc[i-1, 'Points'] + 0.0001
             df.loc[i, 'Conditions']     = df.loc[i-1, 'Conditions1']
             df.loc[i,'Conditions1']     = df.loc[i-1, 'Conditions1']
             df.loc[i,'Material']        = df.loc[i-1, 'Material']
             df.loc[i,'Discontinuity']        = 0
         i += 1  
-    
-    #print(df)
-    
-    
-    # Creating the Mesh, with a higher density of elements close to nodes with Boundary Conditions or Discontinuity
-    
-        #Calcular o vetor de direção entre os nós iniciais
-        #Normalizar o vetor        
-        #Calcular o ponto e adicionar ao DataFrame
         
-    if 1==0: ################## A alterar, para variar com os dados inseridos no excel
+    # Creating the Mesh, with a higher density of elements close to nodes with Boundary Conditions or Discontinuity
+        #Calculate the direction vector
+        #Normalize the vector       
+        #Determine the point and add to the Data Frame
+    # User decides the type of mesh 
+    df_mesh_type    = pd.read_excel(file_name, sheet_name = 'Input', usecols = ['Mesh Type'], nrows = 1)
+    k5              = int(df_mesh_type.loc[0, 'Mesh Type'])
+    
+    if k5==1: # If it wants a mesh with non linear interpolation between the new nods
         i = 0
         while i < (len(df['Points'])):
-            
             if not pd.isna(df.loc[i, 'Nn']) and (df.loc[i, 'Nn'] > 0):
                 
                 point1 = np.array(df.loc[i, ['r','z']].values)
-                #print(point1)
                 j = i + 1 + df.loc[i, 'Nn']
                 point2 = np.array(df.loc[j, ['r','z']].values)
-                #print(point2)
                 
                 v = point2 - point1 # Direction Vector 
                 u = v / np.linalg.norm(v) # Normalize the direction vector
                 distance = np.linalg.norm(v) #Distance between points
-            
                 
                 # If both points need more elements closer to them
                 if ( df.loc[i, 'Discontinuity'] == 1 or df.loc[i, 'Conditions'] != 7 ) and ( df.loc[j, 'Discontinuity'] == 1 or df.loc[j, 'Conditions'] != 7 ):
-                    
-                    
                     k = df.loc[i, 'Nn']
                     q = i
                     while k >= 1:
-                        
                         add = (distance / 2) + ( math.cos( (math.pi / (df.loc[i, 'Nn'] + 1) )* k )) * (distance / 2) # distance to add from point1
                         point3 = point1 + u*add
                         df.loc[q+1, 'r'] = point3[0]
@@ -158,11 +105,9 @@ def Mesh_Properties():
 
                 # If point 1 needs more elements closer
                 if ( df.loc[i, 'Discontinuity'] == 1 or df.loc[i, 'Conditions'] != 7 ) and ( df.loc[j, 'Discontinuity'] == 0 and df.loc[j, 'Conditions'] == 7 ):
-                    
                     k = 1
                     q = i
                     while k <= df.loc[i, 'Nn']:
-                        
                         add = ( math.cos( (((math.pi)/2) / (df.loc[i, 'Nn'] + 1) )* k )) * distance 
                         point3 = point2 - u*add
                         df.loc[q+1, 'r'] = point3[0]
@@ -173,11 +118,9 @@ def Mesh_Properties():
                 
                 # If point2 needs more elements closer
                 if ( df.loc[i, 'Discontinuity'] == 0 and df.loc[i, 'Conditions'] == 7 ) and ( df.loc[j, 'Discontinuity'] == 1 or df.loc[j, 'Conditions'] != 7 ):
-                
                     k = df.loc[i, 'Nn']
                     q = i
                     while k >= 1:
-                        
                         add = ( math.cos( (((math.pi)/2) / (df.loc[i, 'Nn'] + 1) )* k )) * distance 
                         point3 = point1 + u*add
                         df.loc[q+1, 'r'] = point3[0]
@@ -188,37 +131,25 @@ def Mesh_Properties():
                         
                 #If neither points need more elements, we add elements with the same length
                 if ( df.loc[i, 'Discontinuity'] == 0 and df.loc[i, 'Conditions'] == 7 ) and ( df.loc[j, 'Discontinuity'] == 0 and df.loc[j, 'Conditions'] == 7 ):
-                    
                     columns_interpolate     = ['z', 'r']
                     df[columns_interpolate] = df[columns_interpolate].interpolate(method='linear')
 
             i = i + 1
-        
-           
-    # Interpolation Linear Type
-    columns_interpolate     = ['thi', 'Loading']
-    df[columns_interpolate] = df[columns_interpolate].interpolate(method='linear')
-    df.loc[len(df)-1, 'thi'] = np.nan 
-    
-    if 1==1: ################## A alterar, para variar com os dados inseridos no excel
-        # Interpolation Linear Type
+    else: # Interpolation Linear Type
         columns_interpolate     = ['z', 'r']
         df[columns_interpolate] = df[columns_interpolate].interpolate(method='linear')
-        df.loc[len(df)-1, 'thi'] = np.nan 
-
-    #print(df)
-
-
-    # Matriz com as coordenadas dos pontos / Malha
-    mesh = np.array(df[['z','r']].values)
-    #print(mesh)
     
-    # Carregamento para cada nó
+    # Interpolation Linear Type of thicness and loading 
+    columns_interpolate     = ['thi', 'Loading']
+    df[columns_interpolate] = df[columns_interpolate].interpolate(method='linear')
+    
+
+    # Matrix with nodes coordinates 
+    mesh = np.array(df[['z','r']].values)
+    
+    # Loading for each node
     pressure_nodes = np.array(df[['Loading']].values)
-    #print(pressure_nodes)
-
-
-
+   
     # Defining each condition possible for each nodes
     condition0 = [0,0,0]
     condition1 = [1,0,0]
@@ -259,13 +190,10 @@ def Mesh_Properties():
         
         j += 1
 
-
-
-    # Nome do Vetor construído com os dados da coluna "Value" : u_DOF
+    # Boundary Condition Vector
     u_DOF = np.array(Boundary_Conditions["Value"].values)
     u_DOF = u_DOF.reshape((-1, 1))
-    #print(u_DOF)
-
+  
     # Creation of DataFrame regarding the elements
     vpe =   {   'Node_i'    : [],
                 'phi'       : [],
@@ -280,13 +208,12 @@ def Mesh_Properties():
         add =   { 'Node_i'  : [df.loc[i, 'r']],
                 'phi'       : [np.nan],
                 'h'         : [np.nan],
-                'thi'       : [df.loc[i, 'thi']],
+                'thi'       : [np.nan],
                 'mat'       : [df.loc[i, 'Material']]
                 }
         add     = pd.DataFrame(add)
         result  = pd.concat([vpe, add], ignore_index=True)
         vpe     = result
-
 
     # Adding the other information
     for i in range(len(df)-1):
@@ -301,8 +228,9 @@ def Mesh_Properties():
             elif df.loc[i+1, 'r'] < df.loc[i, 'r']:
                 vpe.loc[i, 'phi'] = -(math.pi/2)
 
-  
-
+        vpe.loc[i, 'thi'] = (df.loc[i, 'thi'] + df.loc[i+1, 'thi'])/2
+    
+    # Tranforming it to array
     vpe = np.array(vpe.values)
 
     """
@@ -311,16 +239,11 @@ def Mesh_Properties():
     plt.gca().invert_yaxis()
     plt.legend(loc='center left')
     plt.show()
-    """
-    
-    #print(material)
-    #print(vpe)
-    
-  
+    """    
 
     ################### Static - Loading
     
-    loading = df['Loading'].to_numpy().reshape(-1)
+    loading         = df['Loading'].to_numpy().reshape(-1)
     static_pressure = np.zeros(len(vpe)) # Builds a array filled with zeros with the length of the number of elements
     
     for i in range(0, len(vpe)):
@@ -332,7 +255,7 @@ def Mesh_Properties():
         ri = vpe[i, 0]
         hi = vpe[i, 2]
         p = static_pressure[i]
-        #print(phi, ri, hi, p)
+       
         v_carr = np.zeros(6)
         A11 = 0.5 * ri * (-np.sin(phi)) - (3 / 20) * np.sin(phi) ** 2 * hi
         A12 = 0.5 * ri * np.cos(phi) + (3 / 20) * np.sin(phi) * np.cos(phi) * hi
@@ -345,26 +268,19 @@ def Mesh_Properties():
         load_vct[3 * i:3 * i + 6] = load_vct[3 * i:3 * i + 6] + v_carr
 
     load_vct = np.reshape(load_vct,(-1,1))
-    #print(load_vct)
-
     f_vect = load_vct
     
     
     
     ############################### Dynamic - Loading
-   
     loading_cols = ['t_col', 'PressureCol']
-    df_loading  = pd.read_excel('Livro1.xlsx', sheet_name = 'Loading', usecols = loading_cols, nrows = k2 )
-    #print(df_loading)
-    
-    t_col = np.array(df_loading[['t_col']].values)  #column vector
-    #print(t_col)
-    p_col = np.array(df_loading[['PressureCol']].values) #column vector
-    #print(p_col)
+    df_loading  = pd.read_excel(file_name, sheet_name = 'Loading', usecols = loading_cols, nrows = k2 )
   
+    t_col = np.array(df_loading[['t_col']].values)  #column vector
+    p_col = np.array(df_loading[['PressureCol']].values) #column vector
+   
     
     return mesh, u_DOF, vpe, material, pressure_nodes, t_col, p_col, f_vect
-
 
 #PARTE ALFAGEM
 #ESTÁTICA
@@ -913,7 +829,7 @@ def ModalSolver(k:np.ndarray, m:np.ndarray, u_DOF:np.ndarray):
     #print('Valores Próprios:', natfreq)
     return natfreq, eig_vect, freq1, freq2
 
-#Dinamic Solution:
+#Dynamic Solution:
 #STATIC TEST VERSION ONLY
 def DynamicSolver(k:np.ndarray, m:np.ndarray, c:np.ndarray, u_DOF:np.ndarray, t_col, p_col, vpe, ne, pressure_nodes):
 

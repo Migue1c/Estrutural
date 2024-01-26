@@ -285,9 +285,27 @@ def Mesh_Properties():
     
     
     
+    
+    
     ############################### Dynamic - Loading
-    loading_cols = ['t_col', 'PressureCol']
+    loading_cols = ['t_col', 'PressureCol', 'Add']
     df_loading  = pd.read_excel(file_name, sheet_name = 'Loading', usecols = loading_cols, nrows = k2 )
+    empty_loading        = pd.DataFrame(np.nan, index=[0], columns = loading_cols)
+    
+    # Adding empty rows, with the number of time intervals necessary to have the delta_t specified by the user 
+    i = 0
+    while i < (len(df_loading['Add'])):
+        if not pd.isna(df_loading.loc[i, 'Add']) and df_loading.loc[i, 'Add'] != 0:
+            j=0
+            while j < df_loading.loc[i, 'Add' ]:
+
+                position    = i + 1
+                result      = pd.concat([df_loading.iloc[:position], empty_loading, df_loading.iloc[position:]], ignore_index=True)
+                df_loading          = result
+                j += 1
+        i +=1
+    loading_cols     = ['t_col', 'PressureCol']
+    df_loading[loading_cols] = df_loading[loading_cols].interpolate(method='cubic')
   
     t_col = np.array(df_loading[['t_col']].values)  #column vector
     p_col = np.array(df_loading[['PressureCol']].values) #column vector

@@ -109,7 +109,7 @@ def ModalSolver(k:np.ndarray, m:np.ndarray, u_DOF:np.ndarray):
 
 
 #Original version
-#def DinamicSolver(m:np.ndarray, c:np.ndarray, k:np.ndarray, f:np.ndarray, u_DOF:np.ndarray, tk:float, delta_t:float, t_final:float): #loading, t_col, P_col
+def DinamicSolverOG(m:np.ndarray, c:np.ndarray, k:np.ndarray, f:np.ndarray, u_DOF:np.ndarray, tk:float, delta_t:float, t_final:float): #loading, t_col, P_col
 
     #Reduce Matrices
     k = RedMatrix(k, u_DOF)
@@ -251,6 +251,85 @@ def DinamicSolver(k:np.ndarray, m:np.ndarray, c:np.ndarray, u_DOF:np.ndarray, t_
         #reset starting values for next iteration:
         x_0 = x_1
         x_0_d = x_1_d
+
+    #add lines with zeros to the matrices
+    matrix_u = RdfMatrix(matrix_u, u_DOF)
+    matrix_ud = RdfMatrix(matrix_ud, u_DOF)
+    matrix_ud2 = RdfMatrix(matrix_ud2, u_DOF)
+
+    return matrix_u, matrix_ud, matrix_ud2
+
+#STATIC TEST VERSION
+#STIFNESS FORM (NEWMARK METHOD)
+def DynamicSolverV2(k:np.ndarray, m:np.ndarray, c:np.ndarray, u_DOF:np.ndarray, t_col, p_col, vpe, ne, pressure_nodes):
+    #static test only
+    #Reduce Matrices
+    k = RedMatrix(k, u_DOF)
+    m = RedMatrix(m, u_DOF)
+    c = RedMatrix(c, u_DOF)
+
+    #Define starting values vector (reduced)
+    l = k.shape[0]             #sem -1 burro
+    x_0 = np.zeros([l,1])
+    x_0_d = np.zeros([l,1])
+    x_0_d2 = np.zeros([l,1])
+
+    #Define matrices to store results
+    matrix_u = x_0
+    matrix_ud = x_0_d
+    matrix_ud2 = x_0_d2
+   
+    #0 for Average Acceleration Method; 1 for Linear Acceleration Method
+    method = 0
+    if method == 0:
+        #Average Acceleration Method:
+        gamma = 1/2
+        beta =  1/4
+    else:
+        #Linear Acceleration Method: 
+        gamma = 1/2
+        beta = 1/6
+    
+    #time constraints
+    l = t_col.shape[0] - 1
+    tk = t_col[0,0]
+    t_final = t_col[l,0]
+    fg = 0
+
+    #Starting acel. value
+    f = load_p(vpe, ne, p_col[fg,0], pressure_nodes)
+    f = RedMatrix(f, u_DOF)
+    x_0_d2 = sp.linalg.inv(m) @ (f - (c @ x_0_d ) - (k @ x_0))
+
+    while tk < t_final :
+        
+        #Time increment:
+        tk0 = tk
+        fg += 1
+        tk = t_col[fg,0]
+        delta_t = tk - tk0
+
+        #Loading vector for tk
+        f = load_p(vpe, ne, p_col[fg,0], pressure_nodes)
+        f = RedMatrix(f, u_DOF)
+
+        #Stifness form 
+        k_SF = ( 1 / (beta*(delta_t**2))) * m  + ( gamma / (beta * delta_t)) * c + k
+        f_SF = f + (( 1 / (beta*(delta_t**2))) * m  + ( gamma / (beta * delta_t)) * c ) @ x_0 + (( 1 / (beta*delta_t)) * m + ((gamma/beta)-1) * c) @ x_0_d + (((1/(2*beta))-1) * m + (delta_t/2)*((gamma/beta)-2) * c) @ x_0_d2
+        x_1 = np.linalg.solve(k_SF, f_SF)
+
+        x_1_d2 = (1/((delta_t**2)*beta))*(x_1 - x_0 - (delta_t*x_0_d) - ((delta_t**2)*(0.5-beta)*x_0_d2))
+        x_1_d = x_0_d + ((1 - gamma) * delta_t * x_0_d2) + (delta_t * gamma * x_1_d2)
+ 
+        #store values in matrices
+        matrix_u = np.append(matrix_u, x_1, axis=1)
+        matrix_ud = np.append(matrix_ud, x_1_d, axis=1)
+        matrix_ud2 = np.append(matrix_ud2, x_1_d2, axis=1)
+
+        #reset starting values for next iteration:
+        x_0 = x_1
+        x_0_d = x_1_d
+        x_0_d2 = sp.linalg.inv(m) @ (f - (c @ x_0_d ) - (k @ x_0))
 
     #add lines with zeros to the matrices
     matrix_u = RdfMatrix(matrix_u, u_DOF)

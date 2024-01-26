@@ -986,7 +986,7 @@ def DynamicSolverV2(k:np.ndarray, m:np.ndarray, c:np.ndarray, u_DOF:np.ndarray, 
         #reset starting values for next iteration:
         x_0 = x_1
         x_0_d = x_1_d
-        x_0_d2 = x_1_d2
+        x_0_d2 = sp.linalg.inv(m) @ (f - (c @ x_0_d ) - (k @ x_0))
 
     #add lines with zeros to the matrices
     matrix_u = RdfMatrix(matrix_u, u_DOF)

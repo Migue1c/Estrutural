@@ -1008,20 +1008,17 @@ def DynamicSolverV3(k:np.ndarray, m:np.ndarray, c:np.ndarray, u_DOF:np.ndarray, 
     l = k.shape[0]            
     x_0 = np.zeros([l,1])
     x_0_d = np.zeros([l,1])
-    x_0_d2 = np.zeros([l,1])
 
     #Define matrix to store results
     matrix_u = x_0
    
-    #0 for Average Acceleration Method; 1 for Linear Acceleration Method
+    #Newmark parameters; 0 for Average Acceleration Method; 1 for Linear Acceleration Method
     method = 0
     if method == 0:
-        #Average Acceleration Method:
-        gamma = 1/2
+        gamma = 1/2 #Average Acceleration Method
         beta =  1/4
     else:
-        #Linear Acceleration Method: 
-        gamma = 1/2
+        gamma = 1/2 #Linear Acceleration Method
         beta = 1/6
     
     #time constraints
@@ -1030,10 +1027,15 @@ def DynamicSolverV3(k:np.ndarray, m:np.ndarray, c:np.ndarray, u_DOF:np.ndarray, 
     tk = t_col[0,0]
     t_final = t_col[l,0]
     fg = 0
-    
-    n_limite = 20
-    if n_e >= n_limite:
-        n_it = math.floor(n_e/n_limite)
+
+    #Size reduction
+    ##############
+    n_limit = 100   #nº of time instances to be output
+    ##############
+    t_col_red = np.zeros([1,1])
+    t_col_red[0,0] = tk
+    if n_e >= n_limit:
+        n_it = math.floor(n_e/n_limit)
         n_chk = n_it
 
     #Starting acel. value
@@ -1062,10 +1064,13 @@ def DynamicSolverV3(k:np.ndarray, m:np.ndarray, c:np.ndarray, u_DOF:np.ndarray, 
         x_1_d = x_0_d + ((1 - gamma) * delta_t * x_0_d2) + (delta_t * gamma * x_1_d2)
 
         #store values in matrices
-        if n_e >= n_limite:
+        if n_e >= n_limit:
             if fg == n_chk:
                 n_chk += n_it
                 matrix_u = np.append(matrix_u, x_1, axis=1)
+                t_add = np.zeros([1,1])
+                t_add[0,0] = tk
+                t_col_red = np.append(t_col_red, t_add, axis=1)                
         else:
             matrix_u = np.append(matrix_u, x_1, axis=1)
 
@@ -1076,11 +1081,14 @@ def DynamicSolverV3(k:np.ndarray, m:np.ndarray, c:np.ndarray, u_DOF:np.ndarray, 
 
     #add last iteration
     matrix_u = np.append(matrix_u, x_1, axis=1)
-
+    t_add = np.zeros([1,1])
+    t_add[0,0] = t_final
+    t_col_red = np.append(t_col_red, t_add, axis=1)
+    
     #add lines with zeros to the matrices
     matrix_u = RdfMatrix(matrix_u, u_DOF)
 
-    return matrix_u
+    return matrix_u, t_col_red
 
 #############################################################################################################################################
 #############################################################################################################################################
@@ -1131,11 +1139,12 @@ c = c_global(k, m_gl, freq1, freq2)                             #calculo matriz 
 #c_df.to_excel('c.xlsx', index=False)                           #guardar DF no excel
 #print(c)
 
-matrix_u= DynamicSolverV3(k, m_gl, c, u_DOF, t_col, p_col, vpe, len(vpe), pressure_nodes)
-
+matrix_u, t_col_red= DynamicSolverV3(k, m_gl, c, u_DOF, t_col, p_col, vpe, len(vpe), pressure_nodes)
+print(t_col_red)
 m_u_df = pd.DataFrame(matrix_u)                                 #converter pra dataframe
 m_u_df.to_excel('u.xlsx', index=False)                          #guardar DF no excel
 print(m_u_df)
+
 
 '''
 m_ud_df = pd.DataFrame(matrix_ud)                               #converter pra dataframe

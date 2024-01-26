@@ -421,7 +421,7 @@ def DynamicSolverV3(k:np.ndarray, m:np.ndarray, c:np.ndarray, u_DOF:np.ndarray, 
                 matrix_u = np.append(matrix_u, x_1, axis=1)
                 t_add = np.zeros([1,1])
                 t_add[0,0] = tk
-                t_col_red = np.append(t_col_red, t_add, axis=1)                
+                t_col_red = np.append(t_col_red, t_add, axis=0)                
         else:
             matrix_u = np.append(matrix_u, x_1, axis=1)
 
@@ -434,9 +434,9 @@ def DynamicSolverV3(k:np.ndarray, m:np.ndarray, c:np.ndarray, u_DOF:np.ndarray, 
     matrix_u = np.append(matrix_u, x_1, axis=1)
     t_add = np.zeros([1,1])
     t_add[0,0] = t_final
-    t_col_red = np.append(t_col_red, t_add, axis=1)
+    t_col_red = np.append(t_col_red, t_add, axis=0)
     
     #add lines with zeros to the matrices
     matrix_u = RdfMatrix(matrix_u, u_DOF)
-
+    
     return matrix_u, t_col_red

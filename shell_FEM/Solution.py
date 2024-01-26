@@ -436,7 +436,10 @@ def DynamicSolverV3(k:np.ndarray, m:np.ndarray, c:np.ndarray, u_DOF:np.ndarray, 
     t_add[0,0] = t_final
     t_col_red = np.append(t_col_red, t_add, axis=0)
     
+    if n_e < n_limit:
+        t_col_red = t_col
+        
     #add lines with zeros to the matrices
     matrix_u = RdfMatrix(matrix_u, u_DOF)
-    
+
     return matrix_u, t_col_red

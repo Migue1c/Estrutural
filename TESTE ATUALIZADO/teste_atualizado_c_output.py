@@ -18,6 +18,13 @@ warnings.filterwarnings("ignore", message="The behavior of DataFrame concatenati
 warnings.filterwarnings("ignore", message="Conversion of an array with ndim > 0 to a scalar is deprecated.*")
 warnings.filterwarnings("ignore", message="Casting complex values to real discards the imaginary part.*")
 
+#Show Graphs?  
+show = 0
+
+#Slice angle to be poltted
+rev_degrees = 360
+rev_points = 250 
+
 ti_analise = time.time()
 
 def Mesh_Properties():
@@ -982,146 +989,8 @@ def DynamicSolverV2(k:np.ndarray, m:np.ndarray, c:np.ndarray, u_DOF:np.ndarray, 
     return matrix_u, matrix_ud, matrix_ud2
 
 
-############################################################################################################################################
-#############################################################################################################################################
-#############################################################################################################################################
-
-
-#File Reading
-mesh, u_DOF, vpe, material, pressure_nodes, t_col, p_col, f_vect = Mesh_Properties()
-
-#Static Analysis
-#K matrix
-k = k_global(len(vpe), vpe, material)    #calculo matriz K
-
-#Static Solution & Static Post Process
-u_global = StaticSolver(k, f_vect, u_DOF)                                                   #calculo dos deslocamentos               
-strains, stress, stress_memb = calculate_strains_stresses(u_global, vpe, material)      #calculo das extensões e tensões diretas (e_s, e_th, x_s, x_th)
-t_VM = stress_VM(vpe, stress)                                                 #calculo das tensões de von-misses (t_s_d, t_th_d, t_s_f, t_th_f)
-fsy, fsu = FS(vpe, material, t_VM, stress)                                     #calculo dos fatores de segurança (fsy-cedencia, fsu-rutura)
-
-#Modal Analisys
-#M Matrix
-m_gl = m_global(len(vpe), vpe, material, ni=1200, sparse=False) #calculo matriz M
-
-#Modal solution & Modal Post Process
-natfreq, eig_vect, freq1, freq2 = ModalSolver(k, m_gl, u_DOF)                 #calculo valores e vetores próprios
-
-#Dynamic Analysis
-#C Matrix
-c = c_global(k, m_gl, freq1, freq2)                             #calculo matriz C
-
-#Dynamic solution & Modal Post Process
-u_global_matrix, matrix_v, matrix_a = DynamicSolverV2(k, m_gl, c, u_DOF, t_col, p_col, vpe, len(vpe), pressure_nodes)
-strains_d, stress_d, stress_memb_d, t_VM_d, fsy_d, fsu_d = dyn_post_proc(u_global_matrix, vpe, material)
-
-tf_analise = time.time()
-
-#############################################################################################################################################
-
 #Output
-print()
-print("Output -> On")
-print()
 
-ti_output = time.time()
-
-#Slice angle to be poltted
-rev_degrees = 360
-rev_points = 250 
-
-#Folder Names
-main_folder = "FEM Analysis - Data"
-stress_folder = "Stress Data"
-strain_folder = "Strain Data"
-displacement_folder = 'Displacement Data'
-natfreqs_folder = "Natural Frequencies Data"
-safety_folder = 'Safety Factor Data'
-
-static_folder = 'Static Analysis'
-modal_folder = 'Modal Analysis'
-dynamic_folder = 'Dynamic Analysis'
-
-#Geometry - Output
-geometry_photo = "Geometry.png"
-
-#STRESS DATA
-
-#Stress_SD - Output
-stress_sd_file = "Stress-SD.txt"    #File Name
-stress_vect_sd= stress[:,0]
-
-#Stress_SD - Output
-stress_td_file = "Stress-TD.txt"    #File Name
-stress_vect_td= stress[:,1]
-
-#Stress_SF - Output
-stress_sf_file = "Stress-SF.txt"    #File Name
-stress_vect_sf= stress[:,2]
-
-#Stress_TF - Output
-stress_tf_file = "Stress-TF.txt"    #File Name
-stress_vect_tf= stress[:,3]
-
-#Stress Von Mises Inside - Output
-stress_vm_inside_file =  "Stress VM - Inside.txt"
-stress_vect_vm_inside = t_VM[:,0]
-
-#Stress Von Mises Inside - Output
-stress_vm_outside_file =  "Stress VM - Outside.txt"
-stress_vect_vm_outisde = t_VM[:,1]
-
-
-#Displacement
-
-#Displacement V - Output
-displacement_v_file = "Displacement-V.txt"
-displacement_vect_v = u_global[0::3,0]
-
-#Displacement W - Output
-displacement_w_file = "Displacement-W.txt"
-displacement_vect_w = u_global[1::3,0]
-
-#Displacement W - Output
-displacement_theta_file = "Displacement-Theta.txt"
-displacement_vect_theta = u_global[2::3,0]
-
-#STRAIN DATA
-
-#Strain: Epsilon_S - Output
-strain_epsilon_s_file = "Strain-Epsilon S.txt"
-strain_vect_epsilon_s= strains[:,0]
-
-#Strain: Epsilon_Theta - Output
-strain_epsilon_theta_file = "Strain-Epsilon Theta.txt"
-strain_vect_epsilon_theta= strains[:,1]
-
-
-#Strain: Chi_S - Output
-strain_chi_s_file = "Strain-Chi S.txt"
-strain_vect_chi_s= strains[:,2]
-
-#Strain: Chi_Theta - Output
-strain_chi_theta_file = "Strain-Chi Theta.txt"
-strain_vect_chi_theta= strains[:,3]
-
-
-#FSy - deformação plastica  FSu - rutura
-
-#Safety Factor: Fsy - Output
-safety_fsy_file = "Safety Factor FSy.txt"
-safety_vect_fsy= fsy
-
-#Safety Factor: Fsy - Output
-safety_fsu_file = "Safety Factor FSu.txt"
-safety_vect_fsu= fsu
-
-#Natural Frequencies
-natfreqs_file = "Natural Frequencies.txt"
-
-show = 0
-
-#Functions
 def folders_creator (main_folder,stress_folder,strain_folder,natfreqs_folder,static_folder,modal_folder,dynamic_folder,displacement_folder,safety_folder):
     # Check if the folder already exists; if not, create the folder
     if not os.path.exists(main_folder):
@@ -1269,8 +1138,10 @@ def tecplot_exporter_dynamic_zones(file_path,rev_angle, divisions, mesh,t_col, u
                 for j in range(0, n_nodes):
                     file.write(f'{float(x[j,i]):.7e}  {float(y[j,i]):.7e}  {float(def_mesh[j,0]):.7e}  {float(u[3*j,0]):.7e}  {float(u[3*j+1,0]):.7e}  {float(u[3*j+2,0]):.7e}  {float(strains[j,0]):.7e}  {float(strains[j,1]):.7e}  {float(strains[j,2]):.7e}  {float(strains[j,3]):.7e}  {float(stress[j,0]):.7e}  {float(stress[j,1]):.7e}  {float(stress[j,2]):.7e}  {float(stress[j,3]):.7e}  {float(stress_memb[j,0]):.7e}  {float(stress_memb[j,1]):.7e}  {float(t_VM[j,0]):.7e}  {float(t_VM[j,1]):.7e}  {float(fsy[j]):.7e}  {float(fsu[j]):.7e}\n')
 
-def teplot_exporter_2d(file_name, t_col, u_global_native, strains, stress, stress_memb, t_VM, fsy, fsu):
-    vars = 16
+def teplot_exporter_2d(file_path, t_col, u_global_native, strains, stress, stress_memb, t_VM, fsy, fsu):
+    
+    vars_name = ['v', 'w', 'theta', 'es', 'et', 'xs', 'xt', 'ssd', 'std', 'ssf', 'stf', 'ss_memb', 'st_memb', 'VM_d', 'VM_f', 'fsy', 'fsu']
+    vars = len(vars_name)
     nn = len(strains)
     time_steps = len(t_col)
 
@@ -1285,19 +1156,17 @@ def teplot_exporter_2d(file_name, t_col, u_global_native, strains, stress, stres
     for i in range(time_steps):
         for j in range(vars):
             data_max[i,j] = np.max(u_global[:,j,i])
-    
-    vars_name = ['v', 'w', 'theta', 'es', 'et', 'xs', 'xt', 'ssd', 'std', 'ssf', 'stf', 'ss_memb', 'st_memb', 'VM_d', 'VM_f', 'fsy', 'fsu']
-
-    file_path = os.path.join(main_folder, static_folder, file_name)
 
     #Write file inside the folder
     with open(file_path, 'w') as file:
         file.write("TITLE = \"2D Graphs\"\n")
+        #file.write(f"VARIABLES = t, v, w, theta, es, et, xs, xt, ssd, std, ssf, stf, ss_memb, st_memb, VM_d, VM_f, fsy, fsu\n")
+        file.write(f"VARIABLES = t, v, w, theta, es, et\n")
         for i in range(0, vars):
-            file.write(f"VARIABLES = t, {vars_name[i]}\n")
-            file.write(f"ZONE T=\"undeformed\", I={nn:04d} F=POINT\n")
+            #file.write(f"VARIABLES = t, {vars_name[i]}\n")
+            file.write(f"ZONE T=\"{vars_name[i]}\", I={nn:04d} F=POINT\n")
             for j in range(0, time_steps):
-                file.write(f'{t_col[j]:.7e}  {data_max[j,i]:.7e}\n')     #Confirmar se t_col é apenas um vetor
+                file.write(f'{t_col[j,0]:.7e}  {data_max[j,i]:.7e}\n') 
 
 def nat_freqs(natural_frequencies, main_folder, metric_folder, file_name, show, analysis_folder):
     
@@ -1364,7 +1233,147 @@ def nat_freqs(natural_frequencies, main_folder, metric_folder, file_name, show, 
     plt.close()
 
 
-###################################################################################
+#############################################################################################################################################
+print()
+print('File openning -> On')
+ti_mesh = time.time()
+
+#File Reading
+mesh, u_DOF, vpe, material, pressure_nodes, t_col, p_col, f_vect = Mesh_Properties()
+
+tf_mesh = time.time()
+print('File openning -> Completed') 
+print()
+
+#############################################################################################################################################
+
+ti_static = time.time()
+print('Static Anlysis -> On')
+#Static Analysis
+#K matrix
+k = k_global(len(vpe), vpe, material)    #calculo matriz K
+
+#Static Solution & Static Post Process
+u_global = StaticSolver(k, f_vect, u_DOF)                                                       #Compute of displacements              
+strains, stress, stress_memb = calculate_strains_stresses(u_global, vpe, material)              #Compute of strains and direct stresses (e_s, e_th, x_s, x_th)
+t_VM = stress_VM(vpe, stress)                                                                   #Compute of Von Mises Stress (t_s_d, t_th_d, t_s_f, t_th_f)
+fsy, fsu = FS(vpe, material, t_VM, stress)                                                      #Compute of Safety Factor (fsy-cedencia, fsu-rutura)
+
+tf_static = time.time()
+print('Static Analysis -> Completed')
+print()
+
+#############################################################################################################################################
+
+ti_modal = time.time()
+print('Modal Anlysis -> On')
+
+#Modal Analisys
+#M Matrix
+m_gl = m_global(len(vpe), vpe, material, ni=1200, sparse=False) #calculo matriz M
+
+#Modal solution & Modal Post Process
+natfreq, eig_vect, freq1, freq2 = ModalSolver(k, m_gl, u_DOF)                 #calculo valores e vetores próprios
+
+tf_modal = time.time()
+print('Modal Analysis -> Completed')
+print()
+
+#############################################################################################################################################
+
+ti_dynamic = time.time()
+print('Dynamic Anlysis -> On')
+
+#Dynamic Analysis
+#C Matrix
+c = c_global(k, m_gl, freq1, freq2)                             #calculo matriz C
+
+#Dynamic solution & Modal Post Process
+u_global_matrix, matrix_v, matrix_a = DynamicSolverV2(k, m_gl, c, u_DOF, t_col, p_col, vpe, len(vpe), pressure_nodes)
+strains_d, stress_d, stress_memb_d, t_VM_d, fsy_d, fsu_d = dyn_post_proc(u_global_matrix, vpe, material)
+
+tf_dynamic = time.time()
+print('Dynamic Analysis -> Completed')
+print()
+
+#############################################################################################################################################
+
+
+#Output
+print()
+print("Output -> On")
+print()
+
+ti_output = time.time()
+
+#Folder Names
+main_folder = "FEM Analysis - Data"
+stress_folder = "Stress Data"
+strain_folder = "Strain Data"
+displacement_folder = 'Displacement Data'
+natfreqs_folder = "Natural Frequencies Data"
+safety_folder = 'Safety Factor Data'
+
+static_folder = 'Static Analysis'
+modal_folder = 'Modal Analysis'
+dynamic_folder = 'Dynamic Analysis'
+
+#STRESS DATA
+#Stress_SD - Output
+stress_sd_file = "Stress-SD.txt"    #File Name
+stress_vect_sd= stress[:,0]
+#Stress_SD - Output
+stress_td_file = "Stress-TD.txt"    #File Name
+stress_vect_td= stress[:,1]
+#Stress_SF - Output
+stress_sf_file = "Stress-SF.txt"    #File Name
+stress_vect_sf= stress[:,2]
+#Stress_TF - Output
+stress_tf_file = "Stress-TF.txt"    #File Name
+stress_vect_tf= stress[:,3]
+#Stress Von Mises Inside - Output
+stress_vm_inside_file =  "Stress VM - Inside.txt"   #File Name
+stress_vect_vm_inside = t_VM[:,0]
+#Stress Von Mises Inside - Output
+stress_vm_outside_file =  "Stress VM - Outside.txt" #File Name
+stress_vect_vm_outisde = t_VM[:,1]
+
+
+#Displacement
+#Displacement V - Output
+displacement_v_file = "Displacement-V.txt"  #File Name
+displacement_vect_v = u_global[0::3,0]
+#Displacement W - Output
+displacement_w_file = "Displacement-W.txt"  #File Name
+displacement_vect_w = u_global[1::3,0]
+#Displacement W - Output
+displacement_theta_file = "Displacement-Theta.txt"  #File Name
+displacement_vect_theta = u_global[2::3,0]
+
+#STRAIN DATA
+#Strain: Epsilon_S - Output
+strain_epsilon_s_file = "Strain-Epsilon S.txt"  #File Name
+strain_vect_epsilon_s= strains[:,0]
+#Strain: Epsilon_Theta - Output
+strain_epsilon_theta_file = "Strain-Epsilon Theta.txt"  #File Name
+strain_vect_epsilon_theta= strains[:,1]
+#Strain: Chi_S - Output
+strain_chi_s_file = "Strain-Chi S.txt"  #File Name
+strain_vect_chi_s= strains[:,2]
+#Strain: Chi_Theta - Output
+strain_chi_theta_file = "Strain-Chi Theta.txt"  #File Name
+strain_vect_chi_theta= strains[:,3]
+
+#FSy - deformação plastica  FSu - rutura
+#Safety Factor: Fsy - Output
+safety_fsy_file = "Safety Factor FSy.txt"   #File Name
+safety_vect_fsy= fsy
+#Safety Factor: Fsy - Output
+safety_fsu_file = "Safety Factor FSu.txt"   #File Name
+safety_vect_fsu= fsu
+
+#Natural Frequencies
+natfreqs_file = "Natural Frequencies.txt"   #File Name
 
 #Plots/Figures
 
@@ -1379,44 +1388,12 @@ tecplot_exporter('FEM Analysis - Data\Static Analysis\output_export_tecplot_3d.t
 tecplot_exporter('FEM Analysis - Data\Static Analysis\output_export_tecplot_3d_deformed.txt',rev_degrees, rev_points, mesh, u_global, strains, stress, stress_memb, t_VM, fsy, fsu,4)
 
 #Tecplot data exporter for 3D (Dynamic)
-#tecplot_exporter_dynamic(rev_degrees, rev_points, mesh, u_global_matrix, strains_d, stress_d, stress_memb_d, t_VM_d, fsy_d, fsu_d, t_col,  0)
-#tecplot_exporter_dynamic(rev_degrees, rev_points, mesh, u_global_matrix, strains_d, stress_d, stress_memb_d, t_VM_d, fsy_d, fsu_d, t_col,  4)
-
 tecplot_exporter_dynamic_zones('FEM Analysis - Data\Dynamic Analysis\output_export_dynamic_deformed_tecplot_3d.txt',rev_degrees, rev_points, mesh,t_col, u_global_matrix, strains_d, stress_d, stress_memb_d, t_VM_d, fsy_d, fsu_d, 4)
 
 #Tecplot data export for 2D (Dynamic)
-#teplot_exporter_2d('outpout_export_tecplot_2d.txt', t_col, u_global, strains, stress, stress_memb, t_VM, fsy, fsu)
-
-
-'''
-#Graphs
-
-#Stress - Graphs
-graphs (mesh, rev_degrees, stress_matrix_sd, stress_sd_photo, stress_folder, stress_sd_graph,show,static_folder)
-graphs (mesh, rev_degrees, stress_matrix_td, stress_td_photo, stress_folder, stress_td_graph,show,static_folder)
-graphs (mesh, rev_degrees, stress_matrix_sf, stress_sf_photo, stress_folder, stress_sf_graph,show,static_folder)
-graphs (mesh, rev_degrees, stress_matrix_tf, stress_tf_photo, stress_folder, stress_tf_graph,show,static_folder)
-graphs (mesh,rev_degrees,stress_matrix_vm_inside,stress_vm_inside_photo,stress_folder,stress_vm_inside_graph,show,static_folder)
-graphs (mesh,rev_degrees,stress_matrix_vm_outside,stress_vm_outside_photo,stress_folder,stress_vm_outside_graph,show,static_folder)
-
-#Displacements - Graphs
-graphs (mesh, rev_degrees, displacement_matrix_v, displacement_v_photo, displacement_folder,displacement_v_graph,show,static_folder)
-graphs (mesh, rev_degrees, displacement_matrix_w, displacement_w_photo, displacement_folder,displacement_w_graph,show,static_folder)
-graphs (mesh, rev_degrees, displacement_matrix_theta, displacement_theta_photo, displacement_folder,displacement_theta_graph,show,static_folder)
-
-#Strain - Graphs
-graphs (mesh, rev_degrees, stress_matrix_epsilon_s, strain_epsilon_s_photo, strain_folder,strain_epsilon_s_graph,show,static_folder)
-graphs (mesh, rev_degrees, stress_matrix_epsilon_theta, strain_epsilon_theta_photo, strain_folder,strain_epsilon_theta_graph,show,static_folder)
-graphs (mesh, rev_degrees, stress_matrix_chi_s, strain_chi_s_photo, strain_folder,strain_chi_s_graph,show,static_folder)
-graphs (mesh, rev_degrees, stress_matrix_chi_theta, strain_chi_theta_photo, strain_folder,strain_chi_theta_graph,show,static_folder)
-
-#Safety Factor - Graphs
-graphs (mesh, rev_degrees, safety_matrix_fsy, safety_fsy_photo, safety_folder,safety_fsy_graph,show,static_folder)
-graphs (mesh, rev_degrees,safety_matrix_fsu,safety_fsu_photo,safety_folder,safety_fsu_graph,show,static_folder)
-'''
+teplot_exporter_2d('FEM Analysis - Data\Dynamic Analysis\output_export_dynamic_tecplot_2d.txt', t_col, u_global_matrix, strains_d, stress_d, stress_memb_d, t_VM_d, fsy_d, fsu_d)
 
 #Files 
-
 #Stress - Files
 files (stress_sd_file, stress_vect_sd, main_folder, stress_folder, static_folder,mesh)
 files (stress_td_file, stress_vect_td, main_folder, stress_folder,static_folder,mesh)
@@ -1446,17 +1423,36 @@ nat_freqs (natfreq, main_folder, natfreqs_folder, natfreqs_file,show,modal_folde
 #Time calculation
 tf_output = time.time()
 
-time_taken_analise = tf_analise - ti_analise
+time_taken_mesh = tf_mesh - ti_mesh
+time_taken_static = tf_static - ti_static
+time_taken_modal = tf_modal - ti_modal
+time_taken_dynamic = tf_dynamic - ti_dynamic
 time_taken_output = tf_output - ti_output
-time_total = time_taken_analise + time_taken_output
+time_total = tf_output - ti_mesh
+
+
 
 print()
-print(f"Duração Análise: {round(time_taken_analise,2)} segundos")
-print(f"Duração Output: {round(time_taken_output,2)} segundos")
-print(f"Duração Total: {round(time_total,2)} segundos")
+print(f"File openning: {round(time_taken_mesh,2)} seconds")
+print(f"Static Analysis: {round(time_taken_static,2)} seconds")
+print(f"Modal Analysis: {round(time_taken_modal,2)} seconds")
+print(f"Dynamic Analysis: {round(time_taken_dynamic,2)} seconds")
+print(f"Output: {round(time_taken_output,2)} seconds")
+print(f"Run time: {round(time_total,2)} seconds")
 
 print()
 print("-> Finish")
 print()
+
+
+
+
+
+
+
+
+
+#############################################################################################################################################
+
 
 

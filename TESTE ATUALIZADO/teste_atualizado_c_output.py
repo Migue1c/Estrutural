@@ -12,21 +12,92 @@ import matplotlib.gridspec as gridspec
 import os
 import warnings
 import time
+import threading
+import tkinter as tk
+from tkinter import messagebox
 
-# Ignorar o aviso específico
+#Warnings avoidance
 warnings.filterwarnings("ignore", message="The behavior of DataFrame concatenation with empty or all-NA entries is deprecated.*")
 warnings.filterwarnings("ignore", message="Conversion of an array with ndim > 0 to a scalar is deprecated.*")
 warnings.filterwarnings("ignore", message="Casting complex values to real discards the imaginary part.*")
 
-#Show Graphs?  
-show = 0
+#Functions
+#User input data function
+def user_input():
+    def validate_value():
+        try:
+            show_val = int(entry_show.get())
+            rev_degrees_val = float(entry_rev_degrees.get())
+            rev_points_val = int(entry_rev_points.get())
+            deformation_val = float(entry_deformation.get())
 
-#Slice angle to be poltted
-rev_degrees = 360
-rev_points = 250 
+            if show_val in [0, 1] and rev_degrees_val >= 0 and rev_points_val > 0 and 0 <= deformation_val <= 5:
+                # Set return variables
+                nonlocal show, rev_degrees, rev_points, deformation
+                show = show_val
+                rev_degrees = rev_degrees_val
+                rev_points = rev_points_val
+                deformation = deformation_val
 
-ti_analise = time.time()
+                root.destroy()  # Close the window if all values are valid
+            else:
+                messagebox.showerror("Error", "Inserted values are not valid. Check the instructions.")
 
+        except ValueError:
+            messagebox.showerror("Error", "Make sure to insert valid numerical values.")
+
+    # Initialize return variables
+    show = rev_degrees = rev_points = deformation = None
+
+    # Create the main window
+    root = tk.Tk()
+    root.title("Input Data")
+
+    # Create widgets
+    label_show = tk.Label(root, text="Save graphs [0] // Show graphs and save [1]:")
+    entry_show = tk.Entry(root)
+    entry_show.insert(0, "0")  # Set default value to 0
+
+    label_rev_degrees = tk.Label(root, text="Angle of revolution of axisymmetric geometry [degrees][>0]:")
+    entry_rev_degrees = tk.Entry(root)
+    entry_rev_degrees.insert(0, "360")  # Set default value to 360
+
+    label_rev_points = tk.Label(root, text="Number of revolution points of axisymmetric geometry [>0]:")
+    entry_rev_points = tk.Entry(root)
+    entry_rev_points.insert(0, "250")  # Set default value to 250
+
+    label_deformation = tk.Label(root, text="Geometry deformation factor [from 0 to 5]:")
+    entry_deformation = tk.Entry(root)
+    entry_deformation.insert(0, "3")  # Set default value to 3
+
+    button_confirm = tk.Button(root, text="Confirm", command=validate_value)
+
+    # Position widgets in the window
+    label_show.pack(pady=5)
+    entry_show.pack(pady=5)
+
+    label_rev_degrees.pack(pady=5)
+    entry_rev_degrees.pack(pady=5)
+
+    label_rev_points.pack(pady=5)
+    entry_rev_points.pack(pady=5)
+
+    label_deformation.pack(pady=5)
+    entry_deformation.pack(pady=5)
+
+    button_confirm.pack(pady=10)
+
+    # Start the GUI loop
+    root.mainloop()
+
+    print()
+    print('Starting...')
+    print()
+
+    # Return values after the window is closed
+    return show, rev_degrees, rev_points, deformation
+
+#Data from excel file
 def Mesh_Properties():
     
     file_name = 'Livro1.xlsx'
@@ -283,10 +354,6 @@ def Mesh_Properties():
     load_vct = np.reshape(load_vct,(-1,1))
     f_vect = load_vct
     
-    
-    
-    
-    
     ############################### Dynamic - Loading
     loading_cols = ['t_col', 'PressureCol', 'Add']
     df_loading  = pd.read_excel(file_name, sheet_name = 'Loading', usecols = loading_cols, nrows = k2 )
@@ -416,16 +483,16 @@ def calculate_strains_stresses(displacements, vpe, mat):
     num_nodes = int(len(displacements)/3)
     num_elements = len(vpe)
 
-    strains = np.zeros((num_nodes, 4))  # Matriz para armazenar as deformações de cada nó (epsilon_s, epsilon_theta, chi_s, chi_theta)
+    strains = np.zeros((num_nodes, 4)) # Matrix to store the deformations of each node (epsilon_s, epsilon_theta, chi_s, chi_theta)
     for i in range(num_elements):
         R = vpe[i,0]
         phi = vpe[i,1]
-        B = Bmatrix(0, i, R, phi, vpe)  # Obtém a matriz B para s1 = 0 
-        strains[i,:] += B @ displacements[3*i:3*i+6,0]  # Multiplica deslocamentos pelos valores da matriz B exceto o ultimo
+        B = Bmatrix(0, i, R, phi, vpe)  # Get matrix B for s1 = 0
+        strains[i,:] += B @ displacements[3*i:3*i+6,0]  # Multiplies displacements by the values ​​of matrix B except the last one
     i = num_elements - 1
     h = vpe[i, 2]
-    B = Bmatrix(1, i, R +h*np.sin(phi), phi, vpe)  # Obtém a matriz B para s1 = 1
-    strains[i+1,:] += B @ displacements[3*i:3*i+6,0]  # Multiplica deslocamentos pelos valores da matriz B obtendo a ultima extensao
+    B = Bmatrix(1, i, R +h*np.sin(phi), phi, vpe)  # Get matrix B for s1 = 1
+    strains[i+1,:] += B @ displacements[3*i:3*i+6,0]  # Multiply displacements by the values ​​of matrix B obtaining the last extension
 
     forças_N = np.zeros((num_nodes, 4))
     for i in range(num_elements):
@@ -459,21 +526,22 @@ def calculate_strains_stresses(displacements, vpe, mat):
     stress[i, :] = [sigma_sd, sigma_td, sigma_sf, sigma_tf]
     return strains, stress, stress_memb
 
-def stress_VM(vpe, stress):      #matriz de duas colunas em que a primeira corresponde a dentro da casca e a segunda a fora da casca
+def stress_VM(vpe, stress, stress_memb):      #matrix of two columns in which the first corresponds to inside the shell and the second to outside the shell
     num_nodes = len(vpe) + 1
     num_elements = len(vpe)
-    VM = np.zeros((num_nodes, 2))
-
+    VM = np.zeros((num_nodes, 3))
     for i in range(num_elements):
         VM[i,0] = np.sqrt(stress[i,0]**2 -stress[i,0]*stress[i,2] + stress[i,2]**2)
         VM[i,1] = np.sqrt(stress[i,1]**2 -stress[i,1]*stress[i,3] + stress[i,3]**2)
+        VM[i,2] = np.sqrt(stress_memb[i,0]**2 -stress_memb[i,0]*stress_memb[i,1] + stress_memb[i,1]**2)
     i += 1
     VM[i,0] = np.sqrt(stress[i,0]**2 -stress[i,0]*stress[i,2] + stress[i,2]**2)
     VM[i,1] = np.sqrt(stress[i,1]**2 -stress[i,1]*stress[i,3] + stress[i,3]**2)
+    VM[i,2] = np.sqrt(stress_memb[i,0]**2 -stress_memb[i,0]*stress_memb[i,1] + stress_memb[i,1]**2)
+
     return VM
 
-def FS(vpe, mat, VM, stress):     #FSy - deformação plastica  FSu - rutura
-    VM = stress_VM(vpe, stress)
+def FS(vpe, mat, VM, stress):     #FSy - Yeld safety factor // FSu - Ultimate safety factor
     von_mises = np.zeros(len(VM))
     for i, row in enumerate(VM):
         von_mises[i] += np.max(row)
@@ -504,116 +572,16 @@ def FS(vpe, mat, VM, stress):     #FSy - deformação plastica  FSu - rutura
     FSt = FSc
     if np.any(stress[i+1,:] < 0):
         FSc = mat[5, int(vpe[i,4])-1] / np.min(stress[i+1,:])
-        #print(min(stress[i,:]))
     if np.any(stress[i+1,:] > 0):
         FSt = mat[4 ,int(vpe[i,4])-1] / np.max(stress[i+1,:])
-        #print(FSt)
     if np.abs(FSt) < np.abs(FSc):
         FSU[i+1] = FSt
-        #print(FSt)
     else:
         FSU[i+1] = FSc
-        #print(FSc)
-    #if np.any(stress[i+1,:] == 0):
-        #fsu = 10
     return FSy, FSU
 
 #Loading
-
 #Dynamic Loading
-def func_carr_t (funcoes, A, B, w, b, t_final, pi, util, t_col, p_col):
-    if util[0] == 1:
-        n = np.size(funcoes)
-        dt = 0.01
-        T = np.arange(0, seg_max, dt)
-        seg_max = np.max(t_final)
-        #print(t)
-        #print(np.size(t))
-        P = np.zeros(np.size(T))
-        P[0]=pi[0]
-        for i in range(0,n):
-            if funcoes[i] == 1:
-                A1 = A[0]      #ler do excel
-                B1 = B[0]
-                w1 = w[0]
-                b1 = b[0]
-                first_zero_index1 = np.where(P == 0)[0][0] if (P == 0).any() else None
-                t1 = t_final[0] - dt*first_zero_index1
-                t_sin = np.arange(0, t1, dt)
-                t_iter1 = np.size(t_sin)
-                last_index1 = first_zero_index1 + t_iter1
-
-                #print(t[first_zero_index1:last_index1])
-                P_1 = np.zeros(t_iter1)
-                for i in range (0,t_iter1):
-                    t_1 = t_sin[i]
-                    P_1[i] = A1*np.sin(w1*t_1+b1) + P[first_zero_index1-1] - A1*np.sin(w1*t_sin[0]+b1)
-                #print(t_sin)
-                P[first_zero_index1:last_index1] = P_1
-
-
-            elif funcoes[i] == 2:
-                A2 = A[1]
-                B2 = B[1]
-                first_zero_index2 = np.where(P == 0)[0][0] if (P == 0).any() else None
-                t2 = t_final[1] - first_zero_index2*dt
-                t_exp = np.arange(0, t2, dt)
-                t_iter2 = np.size(t_exp)
-                last_index2 = first_zero_index2 + t_iter2
-                #print(t[first_zero_index2:last_index2])
-                P_2 = np.zeros(t_iter2)
-                for i in range (0, t_iter2):
-                    t_2 = t_exp[i]
-                    P_2[i] = A2*np.exp(B2*t_2) + P[first_zero_index2-1] - 1
-                #print(t_2)
-                P[first_zero_index2:last_index2] = P_2
-
-
-            elif funcoes[i] == 3:
-                A3 = A[2]
-                first_zero_index3 = np.where(P == 0)[0][0] if (P == 0).any() else None
-                t3 = t_final[2] - first_zero_index3 * dt
-                t_lin = np.arange(0, t3, dt)
-                t_iter3 = np.size(t_lin)
-                last_index3 = first_zero_index3 + t_iter3
-                #print(t[first_zero_index3:last_index3])
-                P_3 = np.zeros(t_iter3)
-                for i in range(0, t_iter3):
-                    t_3 = t_lin[i]
-                    P_3[i] = A3*t_3 + P[first_zero_index3-1]
-
-                P[first_zero_index3:last_index3] = P_3
-
-            elif funcoes[i] == 4:
-                first_zero_index4 = np.where(P == 0)[0][0] if (P == 0).any() else None
-                t4 = t_final[3] - first_zero_index4 * dt
-                #print(t4)
-                t_cst = np.arange(0, t4, dt)
-                t_iter4 = np.size(t_cst)
-                last_index4 = first_zero_index4 + t_iter4
-                P_4 = np.zeros(t_iter4)
-                for i in range(0, t_iter4):
-                    P_4[i] = P[first_zero_index4-1]
-                #print(P_4)
-                P[first_zero_index4:last_index4] = P_4
-    elif util[0] == 0:
-        T = t_col
-        P = p_col
-    return P, T
-
-def Carr_t(loading, t, T, P, press_max_est):
-
-    p_col_adim = np.zeros(np.size(P))
-    p_col_adim = P/press_max_est
-    print(np.max(p_col_adim))
-    P_t_adim = np.interp(t,T,p_col_adim)
-
-    loading = loading * P_t_adim
-    print(loading)
-    return loading
-
-#carregamento dinâmico só com teste estático
-#(entra pressão -> saí vetor carregamento ; variação dos valores feita pela função da solução dinâmica)
 def load_p(vpe, ne, P, pressure_nodes):
 
     max = np.amax(pressure_nodes)
@@ -644,9 +612,7 @@ def load_p(vpe, ne, P, pressure_nodes):
     load_vct = load_vct.reshape((-1,1))
     return load_vct
 
-
 #Modal Analsysis
-
 def Mestacked(ne:int, vpe, mat, ni:int, simpson=True) -> np.ndarray:
     mes = np.empty((6,6,ne), dtype=float)
     for i in range(0, ne):
@@ -704,7 +670,6 @@ def m_global(ne:int, vpe, mat, ni=1200, sparse=False) -> np.ndarray:
 #Dynamic Analysis
 def c_global(k_globalM, m_globalM, mode1:float, mode2:float, zeta1=0.08, zeta2=0.08):
     # Pressuposes that the global matrices k_globalM and m_globalM are already reduced
-
     fraction = 2*mode1*mode2/(mode2**2-mode1**2)
     alfa = fraction*(mode2*zeta1-mode1*zeta2)
     beta = fraction*(zeta2/mode1-zeta1/mode2)
@@ -712,7 +677,7 @@ def c_global(k_globalM, m_globalM, mode1:float, mode2:float, zeta1=0.08, zeta2=0
     c_globalM = alfa*m_globalM + beta*k_globalM
     return c_globalM
 
-#Dynamiic Post Process
+#Dynamic Post Process
 def dyn_post_proc(displacements, vpe, material):
     # Getting number of nodes and instants of time
     n_nodes = len(vpe) + 1
@@ -722,7 +687,7 @@ def dyn_post_proc(displacements, vpe, material):
     strains_3 = np.empty((n_nodes, 4, time_instas))
     stress_3 = np.empty((n_nodes, 4, time_instas))
     stress_memb_3 = np.empty((n_nodes, 2, time_instas))
-    t_VM = np.empty((n_nodes, 2, time_instas))
+    t_VM = np.empty((n_nodes, 3, time_instas))
     fsy = np.empty((n_nodes, 1, time_instas))
     fsu = np.empty((n_nodes, 1, time_instas))
 
@@ -733,7 +698,7 @@ def dyn_post_proc(displacements, vpe, material):
         strains_3[:,:,j] = strain        # strains
         stress_3[:,:,j] = stress       # direct stresses inside/outside of shell
         stress_memb_3[:,:,j] = stress_memb     # direct membrane stresses, direct stresses in midle plane
-        t_VM[:,:,j] = stress_VM(vpe, stress)      # von Mises stresses inside/outside
+        t_VM[:,:,j] = stress_VM(vpe, stress,stress_memb)      # von Mises stresses inside/outside
         fsy[:,0,j], fsu[:,0,j] = FS(vpe, material, t_VM[:,:,j], stress)     # yield safety factor, ultimate safety factor
 
 
@@ -741,7 +706,6 @@ def dyn_post_proc(displacements, vpe, material):
     return strains_3, stress_3, stress_memb_3, t_VM, fsy, fsu
 
 #Solution
-
 #Function to reduce matrices
 def RedMatrix(m:np.ndarray, u_DOF:np.ndarray):
     	
@@ -797,18 +761,10 @@ def StaticSolver(k:np.ndarray, f:np.ndarray, u_DOF:np.ndarray):
 def ModalSolver(k:np.ndarray, m:np.ndarray, u_DOF:np.ndarray):
 
     #Reduce stiffness and mass matrices
-    
-    
     k_red = RedMatrix(k, u_DOF)          
     m_red = RedMatrix(m, u_DOF)
     
     #Solve the eigenvalue problem
-    '''
-    a = np.linalg.inv(m_red) @ k_red
-    eig_vals, eig_vect = np.linalg.eig(a)
-    print(eig_vals)
-    print("vetores proprios v1:\n",eig_vect)
-    '''
     eig_vals, eig_vect = sp.linalg.eig(k_red, m_red)
     
     #filter the results
@@ -827,9 +783,9 @@ def ModalSolver(k:np.ndarray, m:np.ndarray, u_DOF:np.ndarray):
     guide_vect = np.argsort(eig_vals)
     natfreq = np.sort(np.sqrt(eig_vals))
 
-    freq1= natfreq[0]       #used to calculate damping matrix
+    freq1= natfreq[0] #used to calculate damping matrix
     freq2= natfreq[1]
-    natfreq = natfreq/(2*np.pi) #convert to hertz
+    natfreq = natfreq/(2*np.pi) #conversion to hertz
 
     #sort vector
     new_mtx = np.zeros((len(eig_vect),len(guide_vect)))
@@ -839,13 +795,11 @@ def ModalSolver(k:np.ndarray, m:np.ndarray, u_DOF:np.ndarray):
         n += 1
     eig_vect = new_mtx
 
-    #print('Valores Próprios:', natfreq)
     return natfreq, eig_vect, freq1, freq2
 
 #Dinamic Solution:
 #STATIC TEST VERSION ONLY
-def DynamicSolver(k:np.ndarray, m:np.ndarray, c:np.ndarray, u_DOF:np.ndarray, t_col, p_col, vpe, ne, pressure_nodes):
-
+def DynamicSolverV3(k:np.ndarray, m:np.ndarray, c:np.ndarray, u_DOF:np.ndarray, t_col, p_col, vpe, ne, pressure_nodes):
     #static test only
     #Reduce Matrices
     k = RedMatrix(k, u_DOF)
@@ -853,116 +807,38 @@ def DynamicSolver(k:np.ndarray, m:np.ndarray, c:np.ndarray, u_DOF:np.ndarray, t_
     c = RedMatrix(c, u_DOF)
 
     #Define starting values vector (reduced)
-    l = k.shape[0]             #sem -1 burro
+    l = k.shape[0]            
     x_0 = np.zeros([l,1])
     x_0_d = np.zeros([l,1])
-    x_0_d2 = np.zeros([l,1])
 
-    #Define matrices to store results
+    #Define matrix to store results
     matrix_u = x_0
-    matrix_ud = x_0_d
-    matrix_ud2 = x_0_d2
    
-    #0 for Average Acceleration Method; 1 for Linear Acceleration Method
+    #Newmark parameters; 0 for Average Acceleration Method; 1 for Linear Acceleration Method
     method = 0
     if method == 0:
-        #Average Acceleration Method:
-        gamma = 1/2
+        gamma = 1/2 #Average Acceleration Method
         beta =  1/4
     else:
-        #Linear Acceleration Method:wr 
-        gamma = 1/2
+        gamma = 1/2 #Linear Acceleration Method
         beta = 1/6
     
     #time constraints
-    l = t_col.shape[0] - 1
+    n_e = t_col.shape[0]
+    l = n_e - 1
     tk = t_col[0,0]
     t_final = t_col[l,0]
     fg = 0
 
-    f = load_p(vpe, ne, p_col[fg,0], pressure_nodes)
-    f = RedMatrix(f, u_DOF)
-    x_0_d2 = sp.linalg.inv(m) @ (f - (c @ x_0_d ) - (k @ x_0))
-
-
-    while tk < t_final :
-        
-        #Starting value [x_d2_(0)]
-        #x_0_d2 = sp.linalg.inv(m) @ (f - (c @ x_0_d ) - (k @ x_0))
-
-        #Time increment:
-        tk0 = tk
-        fg += 1
-        tk = t_col[fg,0]
-        delta_t = tk - tk0
-
-        #Force vector for current tk
-        f = load_p(vpe, ne, p_col[fg,0], pressure_nodes)
-        f = RedMatrix(f, u_DOF)
-        
-        #Prediction:
-        x_1_d = x_0_d + (1 - gamma) * delta_t * x_0_d2
-        x_1 = x_0 + delta_t * x_0_d + (0.5 - beta)*(delta_t**2) * x_0_d2
-        
-        #Equilibrium eqs.:
-        s = m + (gamma * delta_t * c) + (beta * (delta_t**2) * k)
-        x_1_d2 = sp.linalg.inv(s) @ (f - (c @ x_0_d) - (k @ x_0) )
-
-        #Correction:
-        x_1_d = x_1_d + (delta_t * gamma * x_1_d2)
-        x_1 = x_1 + ((delta_t**2) * beta * x_1_d2)
-
-        #store values in matrices
-        matrix_u = np.append(matrix_u, x_1, axis=1)
-        matrix_ud = np.append(matrix_ud, x_1_d, axis=1)
-        matrix_ud2 = np.append(matrix_ud2, x_1_d2, axis=1)
-
-        #reset starting values for next iteration:
-        x_0 = x_1
-        x_0_d = x_1_d
-        x_0_d2 = x_1_d2
-
-    #add lines with zeros to the matrices
-    matrix_u = RdfMatrix(matrix_u, u_DOF)
-    matrix_ud = RdfMatrix(matrix_ud, u_DOF)
-    matrix_ud2 = RdfMatrix(matrix_ud2, u_DOF)
-
-    return matrix_u, matrix_ud, matrix_ud2
-
-def DynamicSolverV2(k:np.ndarray, m:np.ndarray, c:np.ndarray, u_DOF:np.ndarray, t_col, p_col, vpe, ne, pressure_nodes):
-    #static test only
-    #Reduce Matrices
-    k = RedMatrix(k, u_DOF)
-    m = RedMatrix(m, u_DOF)
-    c = RedMatrix(c, u_DOF)
-
-    #Define starting values vector (reduced)
-    l = k.shape[0]             #sem -1 burro
-    x_0 = np.zeros([l,1])
-    x_0_d = np.zeros([l,1])
-    x_0_d2 = np.zeros([l,1])
-
-    #Define matrices to store results
-    matrix_u = x_0
-    matrix_ud = x_0_d
-    matrix_ud2 = x_0_d2
-   
-    #0 for Average Acceleration Method; 1 for Linear Acceleration Method
-    method = 0
-    if method == 0:
-        #Average Acceleration Method:
-        gamma = 1/2
-        beta =  1/4
-    else:
-        #Linear Acceleration Method: 
-        gamma = 1/2
-        beta = 1/6
-    
-    #time constraints
-    l = t_col.shape[0] - 1
-    tk = t_col[0,0]
-    t_final = t_col[l,0]
-    fg = 0
+    #Size reduction
+    ##############
+    n_limit = 100   #nº of time instances to be output
+    ##############
+    t_col_red = np.zeros([1,1])
+    t_col_red[0,0] = tk
+    if n_e >= n_limit:
+        n_it = math.floor(n_e/n_limit)
+        n_chk = n_it
 
     #Starting acel. value
     f = load_p(vpe, ne, p_col[fg,0], pressure_nodes)
@@ -988,27 +864,37 @@ def DynamicSolverV2(k:np.ndarray, m:np.ndarray, c:np.ndarray, u_DOF:np.ndarray, 
 
         x_1_d2 = (1/((delta_t**2)*beta))*(x_1 - x_0 - (delta_t*x_0_d) - ((delta_t**2)*(0.5-beta)*x_0_d2))
         x_1_d = x_0_d + ((1 - gamma) * delta_t * x_0_d2) + (delta_t * gamma * x_1_d2)
- 
+
         #store values in matrices
-        matrix_u = np.append(matrix_u, x_1, axis=1)
-        matrix_ud = np.append(matrix_ud, x_1_d, axis=1)
-        matrix_ud2 = np.append(matrix_ud2, x_1_d2, axis=1)
+        if n_e >= n_limit:
+            if fg == n_chk:
+                n_chk += n_it
+                matrix_u = np.append(matrix_u, x_1, axis=1)
+                t_add = np.zeros([1,1])
+                t_add[0,0] = tk
+                t_col_red = np.append(t_col_red, t_add, axis=0)                
+        else:
+            matrix_u = np.append(matrix_u, x_1, axis=1)
 
         #reset starting values for next iteration:
         x_0 = x_1
         x_0_d = x_1_d
         x_0_d2 = x_1_d2
 
+    #add last iteration
+    matrix_u = np.append(matrix_u, x_1, axis=1)
+    t_add = np.zeros([1,1])
+    t_add[0,0] = t_final
+    t_col_red = np.append(t_col_red, t_add, axis=0)
+    
+    if n_e < n_limit:
+        t_col_red = t_col
+        
     #add lines with zeros to the matrices
     matrix_u = RdfMatrix(matrix_u, u_DOF)
-    matrix_ud = RdfMatrix(matrix_ud, u_DOF)
-    matrix_ud2 = RdfMatrix(matrix_ud2, u_DOF)
 
-    return matrix_u, matrix_ud, matrix_ud2
-
-
+    return matrix_u, t_col_red
 #Output
-
 def folders_creator (main_folder,stress_folder,strain_folder,natfreqs_folder,static_folder,modal_folder,dynamic_folder,displacement_folder,safety_folder):
     # Check if the folder already exists; if not, create the folder
     if not os.path.exists(main_folder):
@@ -1096,25 +982,43 @@ def tecplot_exporter(file_path,rev_angle, divisions, mesh, u_global, strains, st
     with open(file_path, 'w') as file:
         file.write("TITLE = \"Shell\"\n")
         #file.write("VARIABLES = x, y, z, v, w, theta, es, et, xs, xt, ssd, std, ssf, stf, VM_d, VM_f, fsy, fsu\n")
-        file.write("VARIABLES = x, y, z, v, w, theta, es, et, xs, xt, ssd, std, ssf, stf, ss_memb, st_memb, VM_d, VM_f,  fsy, fsu\n")
+        file.write("VARIABLES = x, y, z, v, w, theta, es, et, xs, xt, ss, st, VM, fsy, fsu\n")
         if deformation == 0:
             file.write(f"ZONE T=\"undeformed\", I={n_nodes:04d} J={divisions:04d}\n")
         else:
             file.write(f"ZONE T=\"deformed\", I={n_nodes:04d} J={divisions:04d}\n")
         for i in range(0, divisions):
             for j in range(0, n_nodes):
-                file.write(f'{float(x[j,i]):.7e}  {float(y[j,i]):.7e}  {float(mesh[j,0]):.7e}  {float(u_global[3*j,0]):.7e}  {float(u_global[3*j+1,0]):.7e}  {float(u_global[3*j+2,0]):.7e}  {float(strains[j,0]):.7e}  {float(strains[j,1]):.7e}  {float(strains[j,2]):.7e}  {float(strains[j,3]):.7e}  {float(stress[j,0]):.7e}  {float(stress[j,1]):.7e}  {float(stress[j,2]):.7e}  {float(stress[j,3]):.7e}  {float(stress_memb[j,0]):.7e}  {float(stress_memb[j,1]):.7e}  {float(t_VM[j,0]):.7e}  {float(t_VM[j,1]):.7e}  {float(fsy[j]):.7e}  {float(fsu[j]):.7e}\n')
+                file.write(f'{float(x[j,i]):.7e}  {float(y[j,i]):.7e}  {float(mesh[j,0]):.7e}  {float(u_global[3*j,0]):.7e}  {float(u_global[3*j+1,0]):.7e}  {float(u_global[3*j+2,0]):.7e}  {float(strains[j,0]):.7e}  {float(strains[j,1]):.7e}  {float(strains[j,2]):.7e}  {float(strains[j,3]):.7e}  {float(stress_memb[j,0]):.7e}  {float(stress_memb[j,1]):.7e}  {float(t_VM[j,2]):.7e} {float(fsy[j]):.7e}  {float(fsu[j]):.7e}\n')
 
-def tecplot_exporter_dynamic(rev_angle, divisions, mesh, u_global, strains, stress, stress_memb, t_VM, fsy, fsu, t_col,  deformation):
-   if deformation > 0:
-        for i in range(u_global.shape[1]):
-            u = u_global[:,i].reshape((-1,1))
-            tecplot_exporter((f'FEM Analysis - Data\Dynamic Analysis\output_tecplot_3d(t={t_col[i,0]:.3f}s).txt'),rev_angle, divisions, mesh, u, strains[:,:,i], stress[:,:,i], stress_memb[:,:,i], t_VM[:,:,i], fsy[:,:,i], fsu[:,:,i], deformation)
+def tecplot_exporter_modal(file_path, rev_angle, divisions, mesh, eig_vect,deformation):
+    rev_angle = math.radians(rev_angle)
+    n_nodes = len(mesh)
+    angles = np.linspace(0, rev_angle , divisions, endpoint=True)
+
+    x = np.empty([n_nodes, divisions])
+    y = np.empty([n_nodes, divisions])
     
-        else:
-            for i in range(u_global.shape[1]):
-                u = u_global[:,i].reshape((-1,1))
-                tecplot_exporter((f'FEM Analysis - Data\Dynamic Analysis\output_tecplot_3d_deformed(t={t_col[i,0]:.3f}s).txt'),rev_angle, divisions, mesh, u, strains[:,:,i], stress[:,:,i], stress_memb[:,:,i], t_VM[:,:,i], fsy[:,:,i], fsu[:,:,i], deformation)
+    if deformation == 0:
+        deformation = 1/100
+
+    #Write file inside the folder
+    with open(file_path, 'w') as file:
+        file.write("TITLE = \"Shell\"\n")
+        file.write("VARIABLES = x, y, z,\n")
+
+        for k in range(10):
+            def_mesh = np.copy(mesh)
+            def_mesh[:,0] += eig_vect[0::3,k]*(deformation*100)
+            def_mesh[:,1] += eig_vect[1::3,k]*(deformation*100)
+
+            file.write(f"ZONE T=\"Mode={k+1:.3f}\", I={n_nodes:04d} J={divisions:04d}\n")
+            for l in range(0, n_nodes):
+                x[l, :] = def_mesh[l,1]*np.cos(angles)
+                y[l, :] = def_mesh[l,1]*np.sin(angles)   
+            for i in range(0, divisions):
+                for j in range(0, n_nodes):
+                    file.write(f'{float(x[j,i]):.7e}  {float(y[j,i]):.7e}  {float(def_mesh[j,0]):.7e}\n')
 
 def tecplot_exporter_dynamic_zones(file_path,rev_angle, divisions, mesh,t_col, u_global, strains_zone, stress_zone, stress_memb_zone, t_VM_zone, fsy_zone, fsu_zone, deformation):
     
@@ -1125,21 +1029,19 @@ def tecplot_exporter_dynamic_zones(file_path,rev_angle, divisions, mesh,t_col, u
     x = np.empty([n_nodes, divisions])
     y = np.empty([n_nodes, divisions])
     
+    if deformation == 0:
+        deformation = 1/100
+
     #Write file inside the folder
     with open(file_path, 'w') as file:
         file.write("TITLE = \"Shell\"\n")
-        file.write("VARIABLES = x, y, z, v, w, theta, es, et, xs, xt, ssd, std, ssf, stf, ss_memb, st_memb, VM_d, VM_f,  fsy, fsu\n")
+        file.write("VARIABLES = x, y, z, v, w, theta, es, et, xs, xt, ss, st, VM, fsy, fsu\n")
 
         for k in range(u_global.shape[1]):
-            if deformation != 0:
-                n_nodes = len(mesh)
-                def_mesh = np.copy(mesh)
-                def_mesh[:,0] += u_global[0::3,k]*(deformation*100)
-                def_mesh[:,1] += u_global[1::3,k]*(deformation*100)
-            else:
-                def_mesh = np.copy(mesh)
-                def_mesh[:,0] += u_global[0::3,k]
-                def_mesh[:,1] += u_global[1::3,k]
+            def_mesh = np.copy(mesh)
+            def_mesh[:,0] += u_global[0::3,k]*(deformation*100)
+            def_mesh[:,1] += u_global[1::3,k]*(deformation*100)
+
             file.write(f"ZONE T=\"{t_col[k,0]:.3f}\", I={n_nodes:04d} J={divisions:04d}\n")
             u = u_global[:,k].reshape((-1,1))
             strains = strains_zone[:,:,k]
@@ -1154,21 +1056,23 @@ def tecplot_exporter_dynamic_zones(file_path,rev_angle, divisions, mesh,t_col, u
 
             for i in range(0, divisions):
                 for j in range(0, n_nodes):
-                    file.write(f'{float(x[j,i]):.7e}  {float(y[j,i]):.7e}  {float(def_mesh[j,0]):.7e}  {float(u[3*j,0]):.7e}  {float(u[3*j+1,0]):.7e}  {float(u[3*j+2,0]):.7e}  {float(strains[j,0]):.7e}  {float(strains[j,1]):.7e}  {float(strains[j,2]):.7e}  {float(strains[j,3]):.7e}  {float(stress[j,0]):.7e}  {float(stress[j,1]):.7e}  {float(stress[j,2]):.7e}  {float(stress[j,3]):.7e}  {float(stress_memb[j,0]):.7e}  {float(stress_memb[j,1]):.7e}  {float(t_VM[j,0]):.7e}  {float(t_VM[j,1]):.7e}  {float(fsy[j]):.7e}  {float(fsu[j]):.7e}\n')
+                    file.write(f'{float(x[j,i]):.7e}  {float(y[j,i]):.7e}  {float(def_mesh[j,0]):.7e}  {float(u[3*j,0]):.7e}  {float(u[3*j+1,0]):.7e}  {float(u[3*j+2,0]):.7e}  {float(strains[j,0]):.7e}  {float(strains[j,1]):.7e}  {float(strains[j,2]):.7e}  {float(strains[j,3]):.7e}  {float(stress_memb[j,0]):.7e}  {float(stress_memb[j,1]):.7e}  {float(t_VM[j,2]):.7e}  {float(fsy[j]):.7e}  {float(fsu[j]):.7e}\n')
 
 def teplot_exporter_2d(file_path, t_col, u_global_native, strains, stress, stress_memb, t_VM, fsy, fsu):
     
-    vars_name = ['v', 'w', 'theta', 'es', 'et', 'xs', 'xt', 'ssd', 'std', 'ssf', 'stf', 'ss_memb', 'st_memb', 'VM_d', 'VM_f', 'fsy', 'fsu']
+    vars_name = ['v', 'w', 'theta', 'es', 'et', 'xs', 'xt', 'ss', 'st', 'VM', 'fsy', 'fsu']
     vars = len(vars_name)
     nn = len(strains)
-    time_steps = len(t_col)
+    time_steps = u_global_native.shape[1]
 
     u_global = np.empty((nn,3,time_steps))
     u_global [:,0,:] = u_global_native[0::3, :]
     u_global [:,1,:] = u_global_native[1::3, :]
     u_global [:,2,:] = u_global_native[2::3, :]
 
-    u_global = np.hstack((u_global,strains, stress, stress_memb, t_VM, fsy, fsu)) #caso dê erro fsy/fsu é preciso passar para matriz coluna e nao deixar apenas como vetor
+    t_VM_d = t_VM[:,2,:].reshape((-1,1,time_steps))
+
+    u_global = np.hstack((u_global,strains, stress_memb, t_VM_d, fsy, fsu))
 
     data_max = np.empty((time_steps, vars))
     for i in range(time_steps):
@@ -1178,11 +1082,10 @@ def teplot_exporter_2d(file_path, t_col, u_global_native, strains, stress, stres
     #Write file inside the folder
     with open(file_path, 'w') as file:
         file.write("TITLE = \"2D Graphs\"\n")
-        #file.write(f"VARIABLES = t, v, w, theta, es, et, xs, xt, ssd, std, ssf, stf, ss_memb, st_memb, VM_d, VM_f, fsy, fsu\n")
-        file.write(f"VARIABLES = t, v, w, theta, es, et\n")
+        file.write(f"VARIABLES = t, vars\n")
         for i in range(0, vars):
             #file.write(f"VARIABLES = t, {vars_name[i]}\n")
-            file.write(f"ZONE T=\"{vars_name[i]}\", I={nn:04d} F=POINT\n")
+            file.write(f"ZONE T=\"{vars_name[i]}\", I={nn:04d}, F=POINT\n")
             for j in range(0, time_steps):
                 file.write(f'{t_col[j,0]:.7e}  {data_max[j,i]:.7e}\n') 
 
@@ -1250,8 +1153,10 @@ def nat_freqs(natural_frequencies, main_folder, metric_folder, file_name, show, 
 
     plt.close()
 
-
 #############################################################################################################################################
+
+show, rev_degrees, rev_points, deformation = user_input()
+
 print()
 print('File openning -> On')
 ti_mesh = time.time()
@@ -1266,16 +1171,16 @@ print()
 #############################################################################################################################################
 
 ti_static = time.time()
-print('Static Anlysis -> On')
+print('Static Analysis -> On')
 #Static Analysis
 #K matrix
-k = k_global(len(vpe), vpe, material)    #calculo matriz K
+k = k_global(len(vpe), vpe, material)                                                           #Compute of K
 
 #Static Solution & Static Post Process
 u_global = StaticSolver(k, f_vect, u_DOF)                                                       #Compute of displacements              
-strains, stress, stress_memb = calculate_strains_stresses(u_global, vpe, material)              #Compute of strains and direct stresses (e_s, e_th, x_s, x_th)
-t_VM = stress_VM(vpe, stress)                                                                   #Compute of Von Mises Stress (t_s_d, t_th_d, t_s_f, t_th_f)
-fsy, fsu = FS(vpe, material, t_VM, stress)                                                      #Compute of Safety Factor (fsy-cedencia, fsu-rutura)
+strains, stress, stress_memb = calculate_strains_stresses(u_global, vpe, material)              #Compute of strains and direct stresses
+t_VM = stress_VM(vpe, stress,stress_memb)                                                       #Compute of Von Mises Stress
+fsy, fsu = FS(vpe, material, t_VM, stress)                                                      #Compute of Safety Factor
 
 tf_static = time.time()
 print('Static Analysis -> Completed')
@@ -1284,14 +1189,14 @@ print()
 #############################################################################################################################################
 
 ti_modal = time.time()
-print('Modal Anlysis -> On')
+print('Modal Analysis -> On')
 
 #Modal Analisys
 #M Matrix
-m_gl = m_global(len(vpe), vpe, material, ni=1200, sparse=False) #calculo matriz M
+m_gl = m_global(len(vpe), vpe, material, ni=1200, sparse=False)                 #Compute of M matrix
 
 #Modal solution & Modal Post Process
-natfreq, eig_vect, freq1, freq2 = ModalSolver(k, m_gl, u_DOF)                 #calculo valores e vetores próprios
+natfreq, eig_vect, freq1, freq2 = ModalSolver(k, m_gl, u_DOF)                   #Compute of eign values and eign vectors
 
 tf_modal = time.time()
 print('Modal Analysis -> Completed')
@@ -1300,14 +1205,14 @@ print()
 #############################################################################################################################################
 
 ti_dynamic = time.time()
-print('Dynamic Anlysis -> On')
+print('Dynamic Analysis -> On')
 
 #Dynamic Analysis
 #C Matrix
-c = c_global(k, m_gl, freq1, freq2)                             #calculo matriz C
+c = c_global(k, m_gl, freq1, freq2)                                             #Compute of matrix C
 
 #Dynamic solution & Modal Post Process
-u_global_matrix, matrix_v, matrix_a = DynamicSolverV2(k, m_gl, c, u_DOF, t_col, p_col, vpe, len(vpe), pressure_nodes)
+u_global_matrix, t_col_red = DynamicSolverV3(k, m_gl, c, u_DOF, t_col, p_col, vpe, len(vpe), pressure_nodes)
 strains_d, stress_d, stress_memb_d, t_VM_d, fsy_d, fsu_d = dyn_post_proc(u_global_matrix, vpe, material)
 
 tf_dynamic = time.time()
@@ -1315,7 +1220,6 @@ print('Dynamic Analysis -> Completed')
 print()
 
 #############################################################################################################################################
-
 
 #Output
 print()
@@ -1349,12 +1253,22 @@ stress_vect_sf= stress[:,2]
 #Stress_TF - Output
 stress_tf_file = "Stress-TF.txt"    #File Name
 stress_vect_tf= stress[:,3]
+#Stress_membrane_S - Output
+stress_membrane_s_file = 'Stress - Membrane S'
+stress_vect_membrane_s = stress_memb[:,0]
+#Stress_membrane_T - Output
+stress_membrane_t_file = 'Stress - Membrane T'
+stress_vect_membrane_t = stress_memb[:,1]
 #Stress Von Mises Inside - Output
 stress_vm_inside_file =  "Stress VM - Inside.txt"   #File Name
 stress_vect_vm_inside = t_VM[:,0]
 #Stress Von Mises Inside - Output
 stress_vm_outside_file =  "Stress VM - Outside.txt" #File Name
 stress_vect_vm_outisde = t_VM[:,1]
+#Stress Von Mises Inside - Output
+stress_vm_membrane_file =  "Stress VM - Membrane.txt" #File Name
+stress_vect_vm_membrane = t_VM[:,2]
+
 
 
 #Displacement
@@ -1398,18 +1312,24 @@ natfreqs_file = "Natural Frequencies.txt"   #File Name
 #Creation of folders to add files from the analysis (Mandatory)
 folders_creator(main_folder,stress_folder,strain_folder,natfreqs_folder,static_folder,modal_folder,dynamic_folder,displacement_folder,safety_folder)
 
-#Geometry Plot
-#geometry_plot(mesh,rev_degrees,main_folder,geometry_photo, show)
+print()
+print('Tecplot exporter -> On')
 
 #Tecplot data exporter for 3D (Static)
 tecplot_exporter('FEM Analysis - Data\Static Analysis\output_export_tecplot_3d.txt',rev_degrees, rev_points, mesh, u_global, strains, stress, stress_memb, t_VM, fsy, fsu,0)
-tecplot_exporter('FEM Analysis - Data\Static Analysis\output_export_tecplot_3d_deformed.txt',rev_degrees, rev_points, mesh, u_global, strains, stress, stress_memb, t_VM, fsy, fsu,4)
+tecplot_exporter('FEM Analysis - Data\Static Analysis\output_export_tecplot_3d_deformed.txt',rev_degrees, rev_points, mesh, u_global, strains, stress, stress_memb, t_VM, fsy, fsu,deformation)
+
+#Tecplot exporter for 3D (Modal)
+tecplot_exporter_modal('FEM Analysis - Data\Modal Analysis\output_export_modal_tecplot_3d.txt', rev_degrees, rev_points, mesh, eig_vect,0)
 
 #Tecplot data exporter for 3D (Dynamic)
-tecplot_exporter_dynamic_zones('FEM Analysis - Data\Dynamic Analysis\output_export_dynamic_deformed_tecplot_3d.txt',rev_degrees, rev_points, mesh,t_col, u_global_matrix, strains_d, stress_d, stress_memb_d, t_VM_d, fsy_d, fsu_d, 4)
+tecplot_exporter_dynamic_zones('FEM Analysis - Data\Dynamic Analysis\output_export_dynamic_deformed_tecplot_3d.txt',rev_degrees, rev_points, mesh,t_col_red, u_global_matrix, strains_d, stress_d, stress_memb_d, t_VM_d, fsy_d, fsu_d, deformation)
 
 #Tecplot data export for 2D (Dynamic)
-teplot_exporter_2d('FEM Analysis - Data\Dynamic Analysis\output_export_dynamic_tecplot_2d.txt', t_col, u_global_matrix, strains_d, stress_d, stress_memb_d, t_VM_d, fsy_d, fsu_d)
+teplot_exporter_2d('FEM Analysis - Data\Dynamic Analysis\output_export_dynamic_tecplot_2d.txt', t_col_red, u_global_matrix, strains_d, stress_d, stress_memb_d, t_VM_d, fsy_d, fsu_d)
+
+print('Tecplot exporter -> Data exported')
+print()
 
 #Files 
 #Stress - Files
@@ -1417,6 +1337,9 @@ files (stress_sd_file, stress_vect_sd, main_folder, stress_folder, static_folder
 files (stress_td_file, stress_vect_td, main_folder, stress_folder,static_folder,mesh)
 files (stress_sf_file, stress_vect_sf, main_folder, stress_folder,static_folder,mesh)
 files (stress_tf_file, stress_vect_tf, main_folder, stress_folder,static_folder,mesh)
+files (stress_membrane_s_file, stress_vect_membrane_s,main_folder, stress_folder,static_folder,mesh)
+files (stress_membrane_t_file, stress_vect_membrane_t,main_folder, stress_folder,static_folder,mesh)
+files (stress_vm_membrane_file,stress_vect_membrane_s,main_folder, stress_folder,static_folder,mesh)
 files (stress_vm_inside_file,stress_vect_vm_inside, main_folder, stress_folder, static_folder, mesh)
 files (stress_vm_outside_file,stress_vect_vm_outisde, main_folder, stress_folder, static_folder, mesh)
 
@@ -1449,7 +1372,7 @@ time_taken_output = tf_output - ti_output
 time_total = tf_output - ti_mesh
 
 
-
+print("-> Finish")
 print()
 print(f"File openning: {round(time_taken_mesh,2)} seconds")
 print(f"Static Analysis: {round(time_taken_static,2)} seconds")
@@ -1457,18 +1380,7 @@ print(f"Modal Analysis: {round(time_taken_modal,2)} seconds")
 print(f"Dynamic Analysis: {round(time_taken_dynamic,2)} seconds")
 print(f"Output: {round(time_taken_output,2)} seconds")
 print(f"Run time: {round(time_total,2)} seconds")
-
 print()
-print("-> Finish")
-print()
-
-
-
-
-
-
-
-
 
 #############################################################################################################################################
 

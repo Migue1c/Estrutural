@@ -1077,7 +1077,7 @@ def DynamicSolverV3(k:np.ndarray, m:np.ndarray, c:np.ndarray, u_DOF:np.ndarray, 
         #reset starting values for next iteration:
         x_0 = x_1
         x_0_d = x_1_d
-        x_0_d2 = sp.linalg.inv(m) @ (f - (c @ x_0_d ) - (k @ x_0))
+        x_0_d2 = x_1_d2
 
     #add last iteration
     matrix_u = np.append(matrix_u, x_1, axis=1)

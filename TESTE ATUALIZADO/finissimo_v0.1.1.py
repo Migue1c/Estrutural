@@ -550,7 +550,7 @@ def FS(vpe, mat, VM, stress):     #FSy - Yeld safety factor // FSu - Ultimate sa
     FSU = np.empty((ne+1))
     for i in range(ne):
         if von_mises[i] == 0:
-            FSy[i] = 10
+            FSy[i] = 2000
         else:
             FSy[i] = mat[3, int(vpe[i, 4]) - 1] / von_mises[i]  
         FSc = 10

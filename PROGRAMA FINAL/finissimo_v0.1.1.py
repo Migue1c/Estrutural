@@ -1337,7 +1337,7 @@ tecplot_exporter('FEM Analysis - Data\Static Analysis\output_export_tecplot_3d_d
 tecplot_exporter_modal('FEM Analysis - Data\Modal Analysis\output_export_modal_tecplot_3d.txt', rev_degrees, rev_points, mesh, eig_vect,0)
 
 #Tecplot data exporter for 3D (Dynamic)
-tecplot_exporter_dynamic_zones('FEM Analysis - Data\Dynamic Analysis\output_export_dynamic_deformed_tecplot_3d.txt',rev_degrees, rev_points, mesh,t_col_red, u_global_matrix, strains_d, stress_d, stress_memb_d, t_VM_d, fsy_d, fsu_d, deformation)
+tecplot_exporter_dynamic_zones('FEM Analysis - Data\Dynamic Analysis\output_export_dynamic_deformed_tecplot_3d.txt',rev_degrees, rev_points, mesh,t_col_red, u_global_matrix, strains_d, stress_d, stress_memb_d, t_VM_d, fsy_d, fsu_d, 3)
 
 #Tecplot data export for 2D (Dynamic)
 teplot_exporter_2d('FEM Analysis - Data\Dynamic Analysis\output_export_dynamic_tecplot_2d.txt', t_col_red, u_global_matrix, strains_d, stress_d, stress_memb_d, t_VM_d, fsy_d, fsu_d)

@@ -12,7 +12,6 @@ import matplotlib.gridspec as gridspec
 import os
 import warnings
 import time
-import threading
 import tkinter as tk
 from tkinter import messagebox
 
